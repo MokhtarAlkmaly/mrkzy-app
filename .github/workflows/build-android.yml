@@ -30,7 +30,7 @@ jobs:
           java-version: "21"
 
       - name: تثبيت حزم المشروع
-        run: npm ci
+        run: npm install
 
       - name: بناء ملفات الويب
         run: npm run build

@@ -2,7 +2,9 @@
 
 توثيق مخطط **Supabase (PostgreSQL)** المستخدم في التطبيق، مقابل أنواع TypeScript المولَّدة، وسكيمة SQLite المحلية.
 
-آخر مراجعة: **2026-10-11** — 17 جدولاً في `public`، لا يوجد جدول أو عمود مفقود بين `supabase/migrations/` و`src/integrations/supabase/types.ts`.
+آخر مراجعة: **2026-10-11** — 22 جدولاً في `public`، لا يوجد جدول أو عمود مفقود بين `supabase/migrations/` و`src/integrations/supabase/types.ts`.
+
+المخطط مُختبَر آلياً: `npm run test:sql` يشغّل كل الـ migrations على PostgreSQL حقيقي داخل الذاكرة (`@electric-sql/pglite`) ويفحص 117 حالة (RLS، الأدوار، دوال بوابة المعلم/ة، مشاركة القراءة، الأشهر الاثني عشر، أعمدة السجل الجديدة).
 
 ---
 
@@ -12,7 +14,10 @@
 | --- | --- |
 | `supabase/migrations/*.sql` | مصدر الحقيقة لإنشاء المخطط من الصفر |
 | `src/integrations/supabase/types.ts` | أنواع العميل (`Database["public"]["Tables"]`) |
-| `supabase/drop-all-tables.sql` | حذف كل جداول `public` الـ 17 ثم أي جدول متبقٍ |
+| `supabase/drop-all-tables.sql` | حذف كل جداول `public` الـ 22 ودوالها ثم أي جدول متبقٍ |
+| `scripts/test-sql.mjs` | اختبارات المخطط (117 اختباراً) على PGlite |
+| `docs/دليل-نظام-المستخدمين.md` | دليل تفعيل واستعمال نظام المستخدمين |
+| `docs/روابط-المعلمين-دليل.md` | دليل بوابة المعلم/ة والوارد والتقرير اليدوي |
 | `src/utils/sqliteClient.ts` | سكيمة SQLite المحلية (مجموعة جزئية للكاش/الأوفلاين) |
 | `src/utils/storage.ts` | طبقة CRUD السحابية لجداول القرآن/المالية/المتابعة |
 | `supabase/config.toml` | `project_id = hzpvtmfgvddjkuzonict` |
@@ -28,7 +33,7 @@
 
 ---
 
-## الجداول الـ 17
+## الجداول الـ 22
 
 | # | الجدول | المجال | المفتاح الأساسي | مصدر الإنشاء |
 | --- | --- | --- | --- | --- |
@@ -49,8 +54,17 @@
 | 15 | `training_courses` | تدريب | `id` UUID | `20260913120000_training_department.sql` |
 | 16 | `training_enrollments` | تدريب | `id` UUID | `20260913120000_training_department.sql` |
 | 17 | `monthly_tracking` | متابعة شهرية | مركّب `(student_id, year, month)` — **بدون عمود `id`** | `20261011120000_monthly_tracking.sql` |
+| 18 | `profiles` | مستخدمون | `id` UUID = `auth.users.id` | `20261011130000_user_management_and_data_sharing.sql` |
+| 19 | `user_roles` | مستخدمون | `id` UUID | `20261011130000_user_management_and_data_sharing.sql` |
+| 20 | `data_access_grants` | مستخدمون | `id` UUID | `20261011130000_user_management_and_data_sharing.sql` |
+| 21 | `teacher_portals` | روابط المعلمين | `id` UUID | `20261011140000_teacher_portal_and_submissions.sql` |
+| 22 | `monthly_submissions` | وارد المعلمين | `id` UUID | `20261011140000_teacher_portal_and_submissions.sql` |
 
-كل الجداول عليها **RLS** بسياسات `auth.uid() = user_id` لـ SELECT/INSERT/UPDATE/DELETE (ما عدا `user_settings` بلا سياسة DELETE صريحة).
+كل الجداول عليها **RLS**:
+
+- جداول البيانات (1–17): سياسات `auth.uid() = user_id` لـ SELECT/INSERT/UPDATE/DELETE (ما عدا `user_settings` بلا سياسة DELETE صريحة)، **وزيادةً عليها** سياسة `Shared read through access grants` للقراءة عبر `can_read_user_data(user_id)`.
+- `profiles` / `user_roles` / `data_access_grants`: سياسات مخصّصة — الملف الشخصي يقرأه الجميع ويعدّله صاحبه؛ الأدوار يقرأها الجميع ولا يكتبها إلا المسؤول؛ الأذونات يديرها صاحب البيانات فقط ولا يمنح أحدٌ نفسه إذناً.
+- `teacher_portals` / `monthly_submissions`: المالك يديرها، ودور `anon` يصل إليها **عبر الدالتين** `open_teacher_portal` و`submit_teacher_monthly` فقط (بلا سياسات مباشرة لـ`anon`).
 
 ---
 
@@ -62,6 +76,10 @@ erDiagram
   students ||--o{ year_data : "student_id CASCADE"
   trainees ||--o{ training_enrollments : "trainee_id CASCADE"
   training_courses ||--o{ training_enrollments : "course_id CASCADE"
+  profiles ||--o{ data_access_grants : "owner_id CASCADE"
+  profiles ||--o{ data_access_grants : "grantee_id CASCADE"
+  teacher_portals ||--o{ monthly_submissions : "portal_id CASCADE"
+  students ||--o{ monthly_submissions : "student_id CASCADE"
 
   students {
     bigint id PK
@@ -90,6 +108,14 @@ erDiagram
 | `awards` | `user_id` | `auth.users(id)` | CASCADE |
 | `training_enrollments` | `trainee_id` | `trainees(id)` | CASCADE |
 | `training_enrollments` | `course_id` | `training_courses(id)` | CASCADE |
+| `profiles` | `id` | `auth.users(id)` | CASCADE |
+| `user_roles` | `user_id` | `auth.users(id)` | CASCADE |
+| `data_access_grants` | `owner_id` | `profiles(id)` | CASCADE |
+| `data_access_grants` | `grantee_id` | `profiles(id)` | CASCADE |
+| `teacher_portals` | `user_id` | `auth.users(id)` | CASCADE |
+| `monthly_submissions` | `user_id` | `auth.users(id)` | CASCADE |
+| `monthly_submissions` | `portal_id` | `teacher_portals(id)` | CASCADE (فارغ في الإدخال اليدوي) |
+| `monthly_submissions` | `student_id` | `students(id)` | CASCADE |
 
 `types.ts` يعكس علاقات `public` فقط (لا يدرج `auth.users`): `hifz_history` → `students`، `year_data` → `students`، `training_enrollments` → `trainees` و`training_courses`.
 
@@ -114,8 +140,20 @@ erDiagram
 | `user_id` | `UUID NN` → `auth.users` | `string` | |
 | `name` | `TEXT NN d=''` | `string` | |
 | `teacher` | `TEXT NN d=''` | `string` | اسم المعلمة/المعلم كنص، ليس FK |
+| `gender` | `TEXT` | `string \| null` | `ذكر` / `أنثى` (`GENDER_OPTIONS`) |
+| `hijri_join_date` | `TEXT` | `string \| null` | تاريخ الالتحاق الهجري |
+| `initial_hifz` | `TEXT` | `string \| null` | الحفظ عند الالتحاق |
+| `first_competition_year` | `TEXT` | `string \| null` | أول عام مشاركة في مسابقة |
+| `status` | `TEXT` | `string \| null` | من قائمة الحالات المُدارة في الإعدادات |
+| `school_grade` | `TEXT` | `string \| null` | الصف الدراسي (`src/utils/schoolGrades.ts`) |
+| `guardian_phone` | `TEXT` | `string \| null` | هاتف ولي الأمر |
+| `student_phone` | `TEXT` | `string \| null` | هاتف الطالب/ة |
+| `custom_fields` | `JSONB NN d='{}'` | `Json` | قيم الأعمدة المخصّصة `{columnId: value}` |
+| `notes` | `TEXT` | `string \| null` | ملاحظات حرة |
 | `created_at` | `timestamptz NN d=now()` | `string` | |
 | `updated_at` | `timestamptz NN d=now()` | `string` | trigger |
+
+الأعمدة العشرة بين `gender` و`notes` أُضيفت في `20261011150000_add_student_profile_fields.sql`، مع فهرسَي `idx_students_school_grade(user_id, school_grade)` و`idx_students_gender(user_id, gender)`.
 
 ### 2. `hifz_history`
 
@@ -168,6 +206,8 @@ erDiagram
 | `teacher_signature` | `TEXT NN d=''` | `string` |
 | `supervisor_signature` | `TEXT NN d=''` | `string` |
 | `manager_signature` | `TEXT NN d=''` | `string` |
+| `student_custom_columns` | `JSONB NN d='[]'` | `Json` | تعريفات الأعمدة المخصّصة (`CustomColumnDef[]`) |
+| `student_statuses` | `JSONB NN d='[]'` | `Json` | حالات الطلاب والطالبات (`string[]`) |
 | `created_at` / `updated_at` | `timestamptz NN` | `string` |
 
 ### 5. `media`
@@ -375,14 +415,14 @@ erDiagram
 
 ### 17. `monthly_tracking`
 
-متابعة محرم–رمضان (`month BETWEEN 1 AND 9`). أُنشئ أصلاً يدوياً في الإنتاج ثم ثُبِّت في الـ migrations بشكل idempotent (`IF NOT EXISTS`). **لا يوجد عمود `id`.**
+متابعة **محرم–ذو الحجة** (`month BETWEEN 1 AND 12`) — وُسِّعت من 9 أشهر في `20261011130100_expand_monthly_tracking_to_12_months.sql` دون حذف أي بيانات (إسقاط القيد ثم إعادة إنشائه + فهرسان). أُنشئ الجدول أصلاً يدوياً في الإنتاج ثم ثُبِّت في الـ migrations بشكل idempotent (`IF NOT EXISTS`). **لا يوجد عمود `id`.**
 
 | العمود | SQL | types.ts |
 | --- | --- | --- |
 | `user_id` | `UUID NN` | `string` |
 | `student_id` | `INTEGER NN` (جزء من PK) | `number` |
 | `year` | `TEXT NN` | `string` |
-| `month` | `SMALLINT NN CHECK (1–9)` | `number` |
+| `month` | `SMALLINT NN CHECK (1–12)` | `number` |
 | `memorization_from_surah` / `_ayah` | `INTEGER` | `number \| null` |
 | `memorization_to_surah` / `_ayah` | `INTEGER` | `number \| null` |
 | `memorization_hifz_score` | `NUMERIC NN d=0` | `number` |
@@ -394,6 +434,87 @@ erDiagram
 | `attendance_score` | `NUMERIC NN d=0` | `number` |
 | `behavior_score` | `NUMERIC NN d=0` | `number` |
 | `created_at` / `updated_at` | `timestamptz NN` | `string` |
+
+فهرسا `idx_monthly_tracking_user_year_month(user_id, year, month)` و`idx_monthly_tracking_student(student_id)` أُضيفا مع توسعة الأشهر.
+
+### 18. `profiles`
+
+ملف شخصي لكل حساب. يُنشأ تلقائياً بتريغر `on_auth_user_created` على `auth.users` (الدالة `public.handle_new_user()`)، ويمنح الدور `admin` لأول حساب في المشروع أو لمن يطابق `admin_email()`.
+
+| العمود | SQL | types.ts |
+| --- | --- | --- |
+| `id` | `UUID PK` → `auth.users(id)` CASCADE | `string` |
+| `email` | `TEXT` | `string \| null` |
+| `display_name` | `TEXT` | `string \| null` |
+| `created_at` / `updated_at` | `timestamptz NN` | `string` |
+
+### 19. `user_roles`
+
+الأدوار في جدول منفصل عن الملف الشخصي منعاً لتصعيد الصلاحيات. `UNIQUE(user_id, role)`، والنوع `public.app_role = 'admin' | 'user'`.
+
+| العمود | SQL | types.ts |
+| --- | --- | --- |
+| `id` | `UUID PK` | `string` |
+| `user_id` | `UUID NN` → `auth.users(id)` CASCADE | `string` |
+| `role` | `app_role NN d='user'` | `string` |
+| `created_at` | `timestamptz NN` | `string` |
+
+### 20. `data_access_grants`
+
+إذن اطلاع مستخدم على بيانات مستخدم آخر. `UNIQUE(owner_id, grantee_id)` + `CHECK (owner_id <> grantee_id)` فلا يمنح أحدٌ نفسه إذناً.
+
+| العمود | SQL | types.ts |
+| --- | --- | --- |
+| `id` | `UUID PK` | `string` |
+| `owner_id` | `UUID NN` → `profiles(id)` CASCADE | `string` |
+| `grantee_id` | `UUID NN` → `profiles(id)` CASCADE | `string` |
+| `access_level` | `TEXT NN d='read' CHECK ('read','write')` | `string` |
+| `note` | `TEXT` | `string \| null` |
+| `created_at` / `updated_at` | `timestamptz NN` | `string` |
+
+فهرسا `idx_grants_owner` و`idx_grants_grantee`. الواجهة تستعمل `read` فقط حالياً، و`write` محجوزة للمستقبل.
+
+### 21. `teacher_portals`
+
+رابط بوابة معلم/ة. الكود فريد عالمياً (`teacher_portals_code_key`) ولا يحتاج حساباً لفتحه.
+
+| العمود | SQL | types.ts |
+| --- | --- | --- |
+| `id` | `UUID PK` | `string` |
+| `user_id` | `UUID NN` → `auth.users(id)` CASCADE | `string` |
+| `teacher_name` | `TEXT NN` | `string` |
+| `code` | `TEXT NN` (فريد) | `string` |
+| `year` | `TEXT NN` | `string` |
+| `month` | `INTEGER NN CHECK (1–12)` | `number` |
+| `active` | `BOOLEAN NN d=true` | `boolean` |
+| `created_at` / `updated_at` | `timestamptz NN` | `string` |
+
+### 22. `monthly_submissions`
+
+ترسيلات المعلمين والمعلمات — نفس حقول `monthly_tracking` تماماً + حالة المراجعة والسجل. فريد على (البوابة، الطالب/ة) عبر `monthly_submissions_portal_student_key`، وعلى الإدخال اليدوي عبر `monthly_submissions_manual_key`.
+
+| العمود | SQL | types.ts |
+| --- | --- | --- |
+| `id` | `UUID PK` | `string` |
+| `user_id` | `UUID NN` → `auth.users(id)` CASCADE | `string` |
+| `portal_id` | `UUID` → `teacher_portals(id)` CASCADE — **فارغ في الإدخال اليدوي** | `string \| null` |
+| `code` | `TEXT` — فارغ في الإدخال اليدوي | `string \| null` |
+| `student_id` | `BIGINT NN` → `students(id)` CASCADE | `number` |
+| `student_name` | `TEXT NN` | `string` |
+| `year` | `TEXT NN` | `string` |
+| `month` | `INTEGER NN CHECK (1–12)` | `number` |
+| حقول الحفظ الجديد | `memorization_from_surah/_ayah`, `_to_surah/_ayah` INTEGER؛ `memorization_hifz_score`, `memorization_recitation_score` NUMERIC NN d=0 | `number \| null` / `number` |
+| حقول المراجعة | `review_from_surah/_ayah`, `_to_surah/_ayah` INTEGER؛ `review_hifz_score`, `review_recitation_score` NUMERIC NN d=0 | `number \| null` / `number` |
+| `attendance_score` / `behavior_score` | `NUMERIC NN d=0` | `number` |
+| `notes` | `TEXT` | `string \| null` |
+| `status` | `TEXT NN d='pending' CHECK ('pending','approved','rejected')` | `string` |
+| `source` | `TEXT NN d='portal' CHECK ('portal','manual')` | `string` |
+| `teacher_name` | `TEXT` — اسم المعلم/ة على الترسيل نفسه | `string \| null` |
+| `review_note` | `TEXT` — سبب الرفض، يظهر في البوابة | `string \| null` |
+| `reviewed_at` | `timestamptz` | `string \| null` |
+| `created_at` / `updated_at` | `timestamptz NN` | `string` |
+
+اعتماد الترسيل من صفحة «وارد المعلمين والمعلمات» يكتب صفاً في `monthly_tracking` ويحدّث المجموع السنوي في `year_data`.
 
 ---
 
@@ -407,7 +528,7 @@ erDiagram
 | جداول في migrations غير موجودة في `types.ts` | **لا شيء** |
 | أعمدة في `types.ts` غير موجودة في migrations | **لا شيء** |
 | أعمدة في migrations غير موجودة في `types.ts` | **لا شيء** |
-| `Views` / `Functions` / `Enums` في الأنواع | فارغة (الدالة `update_updated_at_column` موجودة في SQL فقط، وهذا متوقع) |
+| `Functions` في الأنواع | `open_teacher_portal` و`submit_teacher_monthly` (تُستدعيان عبر `supabase.rpc`) — البقية داخلية في SQL |
 
 أعمدة أُضيفت بـ `ALTER TABLE` وكلها منعكسة في الأنواع:
 
@@ -418,6 +539,8 @@ erDiagram
 | `awards` | `funded_by` | `20260728090414_…` |
 | `user_settings` | `center_name`, `teacher_signature`, `supervisor_signature`, `manager_signature` | `20260911120000_…` |
 | `exam_questions` | `category` | `20261011120001_…` |
+| `students` | `gender`, `hijri_join_date`, `initial_hifz`, `first_competition_year`, `status`, `school_grade`, `guardian_phone`, `student_phone`, `custom_fields`, `notes` | `20261011150000_…` |
+| `user_settings` | `student_custom_columns`, `student_statuses` | `20261011150000_…` |
 
 ### فروقات ليست نقص أعمدة (تُذكر للوعي)
 
@@ -441,9 +564,39 @@ erDiagram
 - سياسات المسار: المجلد الأول = `auth.uid()`.
 - التطبيق يوقّع الروابط عبر `supabase.storage.from("media")`.
 
+### دوال الصلاحيات (ترحيل `20261011130000`)
+
+كلها `SECURITY DEFINER` مع `SET search_path = public`:
+
+| الدالة | الدور |
+| --- | --- |
+| `admin_email()` | تُرجع بريد المسؤول المُثبَّت (افتراضياً `''` = غير مُعيَّن) |
+| `is_admin_email(text)` | هل هذا البريد مسؤول؟ عند فراغ `admin_email()` يعتمد **أقدم حساب** في `auth.users` |
+| `has_role(uuid, app_role)` | فحص وجود دور في `user_roles` |
+| `is_admin()` | هل المستخدم الحالي مسؤول؟ |
+| `can_read_user_data(uuid)` | يقرأ بيانات المالك إن كان هو، أو مسؤولاً، أو مُنح إذناً في `data_access_grants` |
+| `admin_list_users()` | RPC: قائمة كل المستخدمين مع عدد طلابهم وحالة الاطلاع — **للمسؤول فقط** |
+| `admin_set_role(uuid, boolean)` | RPC: ترقية/إنزال دور — **للمسؤول فقط**، ويرفض تغيير دور صاحبه |
+| `handle_new_user()` | تريغر `on_auth_user_created`: ينشئ `profiles` ويمنح `admin` لأول حساب |
+
+### دوال بوابة المعلم/ة (ترحيل `20261011140000`)
+
+| الدالة | الدور |
+| --- | --- |
+| `open_teacher_portal(p_code text)` | RPC لدورَي `anon` و`authenticated`: تتحقق من الكود وتفعيله، وتُعيد البوابة + الطلاب والطالبات + ترسيلاتهم + نقطتَي نهاية الشهر السابق |
+| `submit_teacher_monthly(...)` | RPC لدورَي `anon` و`authenticated`: تتحقق من الكود والتفعيل ومطابقة العام/الشهر وتبعية الطالب/ة للمالك، ثم تُدرج/تحدّث الترسيل وترسل `pg_notify('pgst', …)` |
+
+رسائل الرفض بالعربية وتظهر للمستخدم كما هي: «الرابط غير صالح»، «تم إيقاف هذا الرابط»، «الطالب/ة غير موجود في قائمتك».
+
 ### صلاحيات GRANT
 
 الجداول من `awards` فما بعد تمنح `SELECT, INSERT, UPDATE, DELETE` لدور `authenticated` و`ALL` لـ `service_role`. الجداول الأقدم تعتمد على RLS + صلاحيات PostgREST الافتراضية.
+
+الاستثناءات المقصودة:
+
+- `monthly_submissions`: `INSERT` ممنوحة لـ`anon` و`authenticated` (الترسيل عبر البوابة)، بينما `SELECT/UPDATE/DELETE` لـ`authenticated` فقط — فالمعلم/ة بلا حساب لا يقرأ الترسيلات مباشرة إطلاقاً.
+- `teacher_portals`: `SELECT` ممنوحة لـ`anon` (فتح البوابة)، والكتابة لـ`authenticated` فقط.
+- `user_roles`: `SELECT` لـ`authenticated` فقط؛ الكتابة تتم عبر `admin_set_role` أو التريغر.
 
 ---
 
@@ -466,6 +619,10 @@ erDiagram
 | `20260913120000_training_department.sql` | `trainees`, `training_courses`, `training_enrollments` |
 | `20261011120000_monthly_tracking.sql` | `monthly_tracking` (idempotent) |
 | `20261011120001_exam_questions_category.sql` | `exam_questions.category` |
+| `20261011130000_user_management_and_data_sharing.sql` | `profiles`, `user_roles`, `data_access_grants`, نوع `app_role`, دوال الصلاحيات، `admin_list_users`, `admin_set_role`, تريغر الحساب الجديد، وسياسة `Shared read through access grants` على جداول البيانات |
+| `20261011130100_expand_monthly_tracking_to_12_months.sql` | توسيع `monthly_tracking.month` إلى 1–12 + فهرسان (بلا حذف بيانات) |
+| `20261011140000_teacher_portal_and_submissions.sql` | `teacher_portals`, `monthly_submissions`, الدالتان `open_teacher_portal` و`submit_teacher_monthly`, سياسات RLS و`GRANT` لدور `anon` |
+| `20261011150000_add_student_profile_fields.sql` | 10 أعمدة جديدة في `students` + فهرسان، وعمودا `user_settings` المُداران |
 
 ---
 
@@ -475,7 +632,9 @@ erDiagram
 
 موجود محلياً: `students`, `hifz_history`, `year_data`, `teachers`, `teacher_bonuses`, `donors`, `awards`, `ceremony_expenses`, `certificates`, `media`، إضافة إلى جداول محلية فقط: `settings`, `meta`, `pending_changes`.
 
-**غير موجود محلياً** (السحابة فقط): `monthly_tracking`, `student_competitions`, `exam_questions`, `trainees`, `training_courses`, `training_enrollments`, و`user_settings` (يُستبدل بمخزن مفتاح/قيمة `settings`).
+جدول `students` المحلي يحمل الأعمدة العشرة الجديدة نفسها، وقائمة `MIGRATE_STUDENTS_COLS` في `src/utils/sqliteClient.ts` تضيفها تلقائياً لقواعد SQLite القائمة على الأجهزة (مع تجاهل خطأ «العمود موجود»).
+
+**غير موجود محلياً** (السحابة فقط): `monthly_tracking`, `monthly_submissions`, `teacher_portals`, `profiles`, `user_roles`, `data_access_grants`, `student_competitions`, `exam_questions`, `trainees`, `training_courses`, `training_enrollments`, و`user_settings` (يُستبدل بمخزن مفتاح/قيمة `settings`).
 
 لا تستخدم سكيمة SQLite كمرجع لإنشاء جداول Supabase.
 
@@ -499,3 +658,6 @@ erDiagram
 | `trainees` | `src/pages/Trainees.tsx`, `TrainingHome.tsx` |
 | `training_courses` | `src/pages/Courses.tsx`, `TrainingHome.tsx` |
 | `training_enrollments` | `src/pages/Trainees.tsx`, `Courses.tsx` |
+| `profiles`, `user_roles`, `data_access_grants` | `src/pages/Users.tsx`, `src/utils/users.ts`, `src/utils/viewAs.ts`, `src/hooks/useAuth.tsx` |
+| `teacher_portals` | `src/pages/TeacherLinks.tsx`, `src/pages/TeacherPortal.tsx`, `src/utils/teacherPortal.ts` |
+| `monthly_submissions` | `src/pages/Submissions.tsx`, `src/pages/TeacherPortal.tsx`, `src/utils/teacherPortal.ts` |

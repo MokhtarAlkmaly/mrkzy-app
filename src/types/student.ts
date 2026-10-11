@@ -18,16 +18,47 @@ export interface YearData {
   teacher: string;
 }
 
+/** عمود مخصّص يضيفه المستخدم إلى سجل الطلاب (يُحفظ داخل custom_fields). */
+export interface CustomColumnDef {
+  id: string;
+  name: string;
+  type?: "text" | "number" | "date" | "phone";
+}
+
 export interface Student {
   id: number;
   name: string;
   teacher: string;
+  gender?: string; // الجنس: ذكر أو أنثى
+  hijri_join_date?: string; // تاريخ هجري الالتحاق
+  initial_hifz?: string; // مقدار الحفظ قبل الالتحاق
+  first_competition_year?: string; // عام أول مسابقة
+  status?: string; // الحالة: يتيم، معوق، مسكين، طبيعي، أو حالة مخصصة
+  school_grade?: string; // السنة الدراسية وقت الالتحاق
+  guardian_phone?: string; // رقم ولي الأمر
+  student_phone?: string; // رقم الطالب/ة
+  custom_fields?: Record<string, string>; // بيانات الأعمدة المخصصة
+  notes?: string;
   hifzHistory?: HifzHistory;
   yearData?: YearData;
+  // ===== السجل الشامل (كل الأعوام) =====
+  registered_years?: string[]; // الأعوام المسجل بها الطالب/ة
+  latest_total_hifz?: string; // آخر حفظ تراكمي من آخر عام مسجل
 }
 
 export const START_YEAR = 1441;
 export const END_YEAR = 1450;
+
+/**
+ * مفتاح العام قد يكون رقماً عادياً ("1447") أو برفقة مسابقة عشر ذي الحجة ("1447D").
+ * هذه الدوال تنسّقه للعرض.
+ */
+export const formatYearKey = (key: string): string =>
+  key.endsWith("D") ? `${key.slice(0, -1)}هـ · عشر ذي الحجة` : `${key}هـ`;
+
+// نسخة مختصرة للأشرطة الصغيرة داخل الجداول
+export const formatYearKeyShort = (key: string): string =>
+  key.endsWith("D") ? `${key.slice(0, -1)} ذ.ح` : key;
 
 // أشهر المتابعة الشهرية: من محرم إلى رمضان (موسم المسابقة الرمضانية)
 export const TRACKING_MONTHS: { value: number; label: string }[] = [
@@ -40,6 +71,26 @@ export const TRACKING_MONTHS: { value: number; label: string }[] = [
   { value: 7, label: "رجب" },
   { value: 8, label: "شعبان" },
   { value: 9, label: "رمضان" },
+  { value: 10, label: "شوال" },
+  { value: 11, label: "ذو القعدة" },
+  { value: 12, label: "ذو الحجة" },
+];
+
+/** خيارات الجنس المعتمدة في السجل. */
+export const GENDER_OPTIONS = ["ذكر", "أنثى"];
+
+/** حالات الطالب/ة الافتراضية (تُستعمل في القائمة المنسدلة وفي التصفية). */
+export const DEFAULT_STATUSES = [
+  "طبيعي",
+  "يتيم",
+  "يتيمة",
+  "معوق",
+  "معوقة",
+  "فقير",
+  "مسكين",
+  "ذوي احتياجات خاصة",
+  "وافد",
+  "أخرى",
 ];
 
 export interface QuranPoint {

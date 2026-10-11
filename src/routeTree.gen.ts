@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as InstallRouteImport } from './routes/install'
 import { Route as MonthlySearchRouteImport } from './routes/monthly-search'
+import { Route as TeacherRouteImport } from './routes/teacher'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAwardsRouteImport } from './routes/_authenticated/awards'
 import { Route as AuthenticatedCertificatesRouteImport } from './routes/_authenticated/certificates'
@@ -21,6 +22,7 @@ import { Route as AuthenticatedDonorsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedExamQuestionsRouteImport } from './routes/_authenticated/exam-questions'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
 import { Route as AuthenticatedExternalCompetitionRouteImport } from './routes/_authenticated/external-competition'
+import { Route as AuthenticatedHalaqatRouteImport } from './routes/_authenticated/halaqat'
 import { Route as AuthenticatedInternalCompetitionRouteImport } from './routes/_authenticated/internal-competition'
 import { Route as AuthenticatedKhatimatRouteImport } from './routes/_authenticated/khatimat'
 import { Route as AuthenticatedManagementRouteImport } from './routes/_authenticated/management'
@@ -32,9 +34,12 @@ import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
+import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
+import { Route as AuthenticatedTeacherLinksRouteImport } from './routes/_authenticated/teacher-links'
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedTraineesRouteImport } from './routes/_authenticated/trainees'
 import { Route as AuthenticatedTrainingRouteImport } from './routes/_authenticated/training'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -53,6 +58,11 @@ const InstallRoute = InstallRouteImport.update({
 const MonthlySearchRoute = MonthlySearchRouteImport.update({
   id: '/monthly-search',
   path: '/monthly-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeacherRoute = TeacherRouteImport.update({
+  id: '/teacher',
+  path: '/teacher',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -98,6 +108,11 @@ const AuthenticatedExternalCompetitionRoute =
     path: '/external-competition',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedHalaqatRoute = AuthenticatedHalaqatRouteImport.update({
+  id: '/halaqat',
+  path: '/halaqat',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInternalCompetitionRoute =
   AuthenticatedInternalCompetitionRouteImport.update({
     id: '/internal-competition',
@@ -155,6 +170,18 @@ const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSubmissionsRoute =
+  AuthenticatedSubmissionsRouteImport.update({
+    id: '/submissions',
+    path: '/submissions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedTeacherLinksRoute =
+  AuthenticatedTeacherLinksRouteImport.update({
+    id: '/teacher-links',
+    path: '/teacher-links',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTeachersRoute = AuthenticatedTeachersRouteImport.update({
   id: '/teachers',
   path: '/teachers',
@@ -170,12 +197,18 @@ const AuthenticatedTrainingRoute = AuthenticatedTrainingRouteImport.update({
   path: '/training',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/install': typeof InstallRoute
   '/monthly-search': typeof MonthlySearchRoute
+  '/teacher': typeof TeacherRoute
   '/awards': typeof AuthenticatedAwardsRoute
   '/certificates': typeof AuthenticatedCertificatesRoute
   '/courses': typeof AuthenticatedCoursesRoute
@@ -183,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/exam-questions': typeof AuthenticatedExamQuestionsRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/external-competition': typeof AuthenticatedExternalCompetitionRoute
+  '/halaqat': typeof AuthenticatedHalaqatRoute
   '/internal-competition': typeof AuthenticatedInternalCompetitionRoute
   '/khatimat': typeof AuthenticatedKhatimatRoute
   '/management': typeof AuthenticatedManagementRoute
@@ -194,14 +228,18 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/submissions': typeof AuthenticatedSubmissionsRoute
+  '/teacher-links': typeof AuthenticatedTeacherLinksRoute
   '/teachers': typeof AuthenticatedTeachersRoute
   '/trainees': typeof AuthenticatedTraineesRoute
   '/training': typeof AuthenticatedTrainingRoute
+  '/users': typeof AuthenticatedUsersRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/install': typeof InstallRoute
   '/monthly-search': typeof MonthlySearchRoute
+  '/teacher': typeof TeacherRoute
   '/awards': typeof AuthenticatedAwardsRoute
   '/certificates': typeof AuthenticatedCertificatesRoute
   '/courses': typeof AuthenticatedCoursesRoute
@@ -209,6 +247,7 @@ export interface FileRoutesByTo {
   '/exam-questions': typeof AuthenticatedExamQuestionsRoute
   '/expenses': typeof AuthenticatedExpensesRoute
   '/external-competition': typeof AuthenticatedExternalCompetitionRoute
+  '/halaqat': typeof AuthenticatedHalaqatRoute
   '/internal-competition': typeof AuthenticatedInternalCompetitionRoute
   '/khatimat': typeof AuthenticatedKhatimatRoute
   '/management': typeof AuthenticatedManagementRoute
@@ -220,9 +259,12 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRoute
+  '/submissions': typeof AuthenticatedSubmissionsRoute
+  '/teacher-links': typeof AuthenticatedTeacherLinksRoute
   '/teachers': typeof AuthenticatedTeachersRoute
   '/trainees': typeof AuthenticatedTraineesRoute
   '/training': typeof AuthenticatedTrainingRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
@@ -231,6 +273,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/install': typeof InstallRoute
   '/monthly-search': typeof MonthlySearchRoute
+  '/teacher': typeof TeacherRoute
   '/_authenticated/awards': typeof AuthenticatedAwardsRoute
   '/_authenticated/certificates': typeof AuthenticatedCertificatesRoute
   '/_authenticated/courses': typeof AuthenticatedCoursesRoute
@@ -238,6 +281,7 @@ export interface FileRoutesById {
   '/_authenticated/exam-questions': typeof AuthenticatedExamQuestionsRoute
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
   '/_authenticated/external-competition': typeof AuthenticatedExternalCompetitionRoute
+  '/_authenticated/halaqat': typeof AuthenticatedHalaqatRoute
   '/_authenticated/internal-competition': typeof AuthenticatedInternalCompetitionRoute
   '/_authenticated/khatimat': typeof AuthenticatedKhatimatRoute
   '/_authenticated/management': typeof AuthenticatedManagementRoute
@@ -249,9 +293,12 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRoute
+  '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
+  '/_authenticated/teacher-links': typeof AuthenticatedTeacherLinksRoute
   '/_authenticated/teachers': typeof AuthenticatedTeachersRoute
   '/_authenticated/trainees': typeof AuthenticatedTraineesRoute
   '/_authenticated/training': typeof AuthenticatedTrainingRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
@@ -261,6 +308,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/install'
     | '/monthly-search'
+    | '/teacher'
     | '/awards'
     | '/certificates'
     | '/courses'
@@ -268,6 +316,7 @@ export interface FileRouteTypes {
     | '/exam-questions'
     | '/expenses'
     | '/external-competition'
+    | '/halaqat'
     | '/internal-competition'
     | '/khatimat'
     | '/management'
@@ -279,14 +328,18 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/students'
+    | '/submissions'
+    | '/teacher-links'
     | '/teachers'
     | '/trainees'
     | '/training'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/install'
     | '/monthly-search'
+    | '/teacher'
     | '/awards'
     | '/certificates'
     | '/courses'
@@ -294,6 +347,7 @@ export interface FileRouteTypes {
     | '/exam-questions'
     | '/expenses'
     | '/external-competition'
+    | '/halaqat'
     | '/internal-competition'
     | '/khatimat'
     | '/management'
@@ -305,9 +359,12 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/students'
+    | '/submissions'
+    | '/teacher-links'
     | '/teachers'
     | '/trainees'
     | '/training'
+    | '/users'
     | '/'
   id:
     | '__root__'
@@ -315,6 +372,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/install'
     | '/monthly-search'
+    | '/teacher'
     | '/_authenticated/awards'
     | '/_authenticated/certificates'
     | '/_authenticated/courses'
@@ -322,6 +380,7 @@ export interface FileRouteTypes {
     | '/_authenticated/exam-questions'
     | '/_authenticated/expenses'
     | '/_authenticated/external-competition'
+    | '/_authenticated/halaqat'
     | '/_authenticated/internal-competition'
     | '/_authenticated/khatimat'
     | '/_authenticated/management'
@@ -333,9 +392,12 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/students'
+    | '/_authenticated/submissions'
+    | '/_authenticated/teacher-links'
     | '/_authenticated/teachers'
     | '/_authenticated/trainees'
     | '/_authenticated/training'
+    | '/_authenticated/users'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
@@ -344,6 +406,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   InstallRoute: typeof InstallRoute
   MonthlySearchRoute: typeof MonthlySearchRoute
+  TeacherRoute: typeof TeacherRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -374,6 +437,13 @@ declare module '@tanstack/react-router' {
       path: '/monthly-search'
       fullPath: '/monthly-search'
       preLoaderRoute: typeof MonthlySearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teacher': {
+      id: '/teacher'
+      path: '/teacher'
+      fullPath: '/teacher'
+      preLoaderRoute: typeof TeacherRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -430,6 +500,13 @@ declare module '@tanstack/react-router' {
       path: '/external-competition'
       fullPath: '/external-competition'
       preLoaderRoute: typeof AuthenticatedExternalCompetitionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/halaqat': {
+      id: '/_authenticated/halaqat'
+      path: '/halaqat'
+      fullPath: '/halaqat'
+      preLoaderRoute: typeof AuthenticatedHalaqatRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/internal-competition': {
@@ -509,6 +586,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/submissions': {
+      id: '/_authenticated/submissions'
+      path: '/submissions'
+      fullPath: '/submissions'
+      preLoaderRoute: typeof AuthenticatedSubmissionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/teacher-links': {
+      id: '/_authenticated/teacher-links'
+      path: '/teacher-links'
+      fullPath: '/teacher-links'
+      preLoaderRoute: typeof AuthenticatedTeacherLinksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/teachers': {
       id: '/_authenticated/teachers'
       path: '/teachers'
@@ -530,6 +621,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTrainingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -541,6 +639,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedExamQuestionsRoute: typeof AuthenticatedExamQuestionsRoute
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
   AuthenticatedExternalCompetitionRoute: typeof AuthenticatedExternalCompetitionRoute
+  AuthenticatedHalaqatRoute: typeof AuthenticatedHalaqatRoute
   AuthenticatedInternalCompetitionRoute: typeof AuthenticatedInternalCompetitionRoute
   AuthenticatedKhatimatRoute: typeof AuthenticatedKhatimatRoute
   AuthenticatedManagementRoute: typeof AuthenticatedManagementRoute
@@ -552,9 +651,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
+  AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
+  AuthenticatedTeacherLinksRoute: typeof AuthenticatedTeacherLinksRoute
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRoute
   AuthenticatedTraineesRoute: typeof AuthenticatedTraineesRoute
   AuthenticatedTrainingRoute: typeof AuthenticatedTrainingRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -566,6 +668,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedExamQuestionsRoute: AuthenticatedExamQuestionsRoute,
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
   AuthenticatedExternalCompetitionRoute: AuthenticatedExternalCompetitionRoute,
+  AuthenticatedHalaqatRoute: AuthenticatedHalaqatRoute,
   AuthenticatedInternalCompetitionRoute: AuthenticatedInternalCompetitionRoute,
   AuthenticatedKhatimatRoute: AuthenticatedKhatimatRoute,
   AuthenticatedManagementRoute: AuthenticatedManagementRoute,
@@ -577,9 +680,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
+  AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
+  AuthenticatedTeacherLinksRoute: AuthenticatedTeacherLinksRoute,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRoute,
   AuthenticatedTraineesRoute: AuthenticatedTraineesRoute,
   AuthenticatedTrainingRoute: AuthenticatedTrainingRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
@@ -591,6 +697,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   InstallRoute: InstallRoute,
   MonthlySearchRoute: MonthlySearchRoute,
+  TeacherRoute: TeacherRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

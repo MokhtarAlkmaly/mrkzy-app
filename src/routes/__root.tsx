@@ -116,9 +116,10 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body>
         {children}
-        {/* عنصر ويب مطلوب فقط عند التشغيل داخل متصفح عادي (وليس تطبيق أندرويد الأصلي)؛
-            يوفّر محرك SQLite (sql.js) للمتصفح عبر @capacitor-community/sqlite. */}
-        <jeep-sqlite />
+        {/* ملاحظة أداء: عنصر <jeep-sqlite> لم يعد يُزرع هنا. كان وجوده يعني تحميل
+            محرك SQLite/WASM (~1 ميجابايت) على كل صفحة بما فيها صفحة تسجيل الدخول
+            وبوابة المعلم/ة العامة. صار sqliteClient هو من يُنشئه عند أول استخدام
+            فعلي للقاعدة — انظر useLocalDatabase. */}
         <Scripts />
       </body>
     </html>
@@ -128,23 +129,8 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { getDB } = await import("@/utils/sqliteClient");
-        await getDB();
-        if (cancelled) return;
-        const { migrateLegacyIndexedDbCache } = await import("@/utils/migrateLegacyCache");
-        await migrateLegacyIndexedDbCache();
-      } catch (err) {
-        console.error("تعذّرت تهيئة قاعدة البيانات المحلية (SQLite)", err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // تهيئة قاعدة البيانات المحلية انتقلت إلى المسارات التي تحتاجها فعلاً
+  // (src/hooks/useLocalDatabase.ts) حتى لا تُحمَّل على الصفحات العامة.
 
   return (
     <QueryClientProvider client={queryClient}>

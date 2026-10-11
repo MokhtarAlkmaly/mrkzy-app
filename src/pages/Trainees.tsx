@@ -3,17 +3,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@/lib/router-compat";
 import {
-  ArrowRight, Users, Plus, Pencil, Trash2, Save, Search as SearchIcon,
-  MoreVertical, User, BookMarked, X,
+  ArrowRight,
+  Users,
+  Plus,
+  Pencil,
+  Trash2,
+  Save,
+  Search as SearchIcon,
+  MoreVertical,
+  User,
+  BookMarked,
+  X,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +74,9 @@ const Trainees = () => {
   const { toast } = useToast();
   const [rows, setRows] = useState<TraineeRow[]>([]);
   const [courses, setCourses] = useState<CourseOption[]>([]);
-  const [enrollmentsByTrainee, setEnrollmentsByTrainee] = useState<Record<string, EnrollmentInfo[]>>({});
+  const [enrollmentsByTrainee, setEnrollmentsByTrainee] = useState<
+    Record<string, EnrollmentInfo[]>
+  >({});
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,11 +89,23 @@ const Trainees = () => {
     if (!user) return;
     setLoading(true);
     const [{ data: trainees, error }, { data: courseList }] = await Promise.all([
-      supabase.from("trainees").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("training_courses").select("id, name, status").eq("user_id", user.id).order("name"),
+      supabase
+        .from("trainees")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("training_courses")
+        .select("id, name, status")
+        .eq("user_id", user.id)
+        .order("name"),
     ]);
     if (error) {
-      toast({ title: "تعذّر تحميل المتدربات", description: error.message, variant: "destructive" });
+      toast({
+        title: "تعذّر تحميل المتدربين والمتدربات",
+        description: error.message,
+        variant: "destructive",
+      });
       setLoading(false);
       return;
     }
@@ -78,9 +118,12 @@ const Trainees = () => {
         .from("training_enrollments")
         .select("id, trainee_id, course_id, status, training_courses(name)")
         .eq("user_id", user.id)
-        .in("trainee_id", list.map((t) => t.id));
+        .in(
+          "trainee_id",
+          list.map((t) => t.id),
+        );
       const map: Record<string, EnrollmentInfo[]> = {};
-      (enrollments || []).forEach((e: any) => {
+      (enrollments || []).forEach((e) => {
         const info: EnrollmentInfo = {
           id: e.id,
           course_id: e.course_id,
@@ -95,9 +138,11 @@ const Trainees = () => {
       setEnrollmentsByTrainee({});
     }
     setLoading(false);
-  }, [user]);
+  }, [user, toast]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
     const q = query.trim();
@@ -106,7 +151,11 @@ const Trainees = () => {
       .sort((a, b) => a.name.localeCompare(b.name, "ar"));
   }, [rows, query]);
 
-  const openAdd = () => { setEditingId(null); setForm(emptyForm()); setDialogOpen(true); };
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm());
+    setDialogOpen(true);
+  };
   const openEdit = (r: TraineeRow) => {
     setEditingId(r.id);
     setForm({ name: r.name, phone: r.phone || "", gender: r.gender, notes: r.notes || "" });
@@ -164,7 +213,9 @@ const Trainees = () => {
     if (error) {
       toast({
         title: "تعذّر التسجيل",
-        description: error.message.includes("duplicate") ? "المتدربة مسجّلة مسبقًا في هذه الدورة" : error.message,
+        description: error.message.includes("duplicate")
+          ? "المتدرب/المتدربة مسجّل مسبقًا في هذه الدورة"
+          : error.message,
         variant: "destructive",
       });
       return;
@@ -185,7 +236,10 @@ const Trainees = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(24_90%_55%/0.16),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]" dir="rtl">
+    <div
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(24_90%_55%/0.16),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
+      dir="rtl"
+    >
       <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-amber-600 via-orange-700 to-rose-900 px-4 py-5 text-white shadow-2xl shadow-amber-900/20">
         <div className="container mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-4">
@@ -210,9 +264,16 @@ const Trainees = () => {
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[180px]">
             <SearchIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالاسم..." className="pr-9" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ابحث بالاسم..."
+              className="pr-9"
+            />
           </div>
-          <Button className="gap-1" onClick={openAdd}><Plus className="h-4 w-4" /> إضافة متدرب/ة</Button>
+          <Button className="gap-1" onClick={openAdd}>
+            <Plus className="h-4 w-4" /> إضافة متدرب/ة
+          </Button>
         </div>
 
         {loading ? (
@@ -244,11 +305,16 @@ const Trainees = () => {
                     <td className="px-3 py-2">{r.phone || "—"}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1">
-                        {(enrollmentsByTrainee[r.id] || []).length === 0 && <span className="text-muted-foreground">—</span>}
+                        {(enrollmentsByTrainee[r.id] || []).length === 0 && (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                         {(enrollmentsByTrainee[r.id] || []).map((e) => (
                           <Badge key={e.id} variant="secondary" className="gap-1">
                             {e.course_name}
-                            <button onClick={() => void unenroll(e.id)} className="hover:text-destructive">
+                            <button
+                              onClick={() => void unenroll(e.id)}
+                              className="hover:text-destructive"
+                            >
                               <X className="h-3 w-3" />
                             </button>
                           </Badge>
@@ -257,11 +323,17 @@ const Trainees = () => {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1 justify-center">
-                        <Button size="sm" variant="secondary" onClick={() => openEdit(r)}><Pencil className="h-3 w-3" /></Button>
-                        <Button size="sm" variant="destructive" onClick={() => void remove(r)}><Trash2 className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="secondary" onClick={() => openEdit(r)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => void remove(r)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost"><MoreVertical className="h-4 w-4" /></Button>
+                            <Button size="sm" variant="ghost">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start">
                             <DropdownMenuLabel>{r.name}</DropdownMenuLabel>
@@ -290,17 +362,28 @@ const Trainees = () => {
           <div className="space-y-3">
             <div>
               <label className="text-sm font-medium">الاسم الكامل</label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium">الجوال</label>
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">الجنس</label>
-                <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v as Gender })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.gender}
+                  onValueChange={(v) => setForm({ ...form, gender: v as Gender })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="female">أنثى</SelectItem>
                     <SelectItem value="male">ذكر</SelectItem>
@@ -310,12 +393,20 @@ const Trainees = () => {
             </div>
             <div>
               <label className="text-sm font-medium">ملاحظات</label>
-              <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <Textarea
+                rows={2}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => void save()} className="gap-1"><Save className="h-4 w-4" /> حفظ</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={() => void save()} className="gap-1">
+              <Save className="h-4 w-4" /> حفظ
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -327,15 +418,22 @@ const Trainees = () => {
             <DialogTitle>تسجيل {enrollDialogTrainee?.name} في دورة</DialogTitle>
           </DialogHeader>
           <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-            <SelectTrigger><SelectValue placeholder="اختر الدورة" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="اختر الدورة" />
+            </SelectTrigger>
             <SelectContent>
               {courses.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}{c.status !== "active" ? " (غير نشطة)" : ""}</SelectItem>
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                  {c.status !== "active" ? " (غير نشطة)" : ""}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setEnrollDialogTrainee(null)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setEnrollDialogTrainee(null)}>
+              إلغاء
+            </Button>
             <Button onClick={() => void enroll()} disabled={!selectedCourseId} className="gap-1">
               <Save className="h-4 w-4" /> تسجيل
             </Button>

@@ -4,13 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Search as SearchIcon, Printer, Loader2, FileText, Trophy, Gift, Award as AwardIcon,
+  Search as SearchIcon,
+  Printer,
+  Loader2,
+  FileText,
+  Trophy,
+  Gift,
+  Award as AwardIcon,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
 import {
-  loadGlobalStudents, loadHifzHistory, loadYearData, loadAwards, loadCertificates,
-  AwardRow, CertificateRow,
+  loadGlobalStudents,
+  loadHifzHistory,
+  loadYearData,
+  loadAwards,
+  loadCertificates,
+  AwardRow,
+  CertificateRow,
 } from "@/utils/storage";
 import { resolveBaseHifz, calculateGrade, calculatePrize } from "@/utils/calculations";
 import { printHtml, esc } from "@/utils/report";
@@ -48,7 +59,6 @@ const Reports = () => {
         if (match) await openStudent(match);
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const results = useMemo(() => {
@@ -99,7 +109,7 @@ const Reports = () => {
   const totals = useMemo(() => {
     return annualRows.reduce(
       (acc, r) => ({ parts: acc.parts + r.parts, prize: acc.prize + r.prize }),
-      { parts: 0, prize: 0 }
+      { parts: 0, prize: 0 },
     );
   }, [annualRows]);
 
@@ -109,33 +119,59 @@ const Reports = () => {
       <h2>المسابقة الرمضانية عبر الأعوام</h2>
       <table>
         <thead><tr><th>العام</th><th>إجمالي الحفظ</th><th>الأجزاء الجديدة</th><th>المجموع</th><th>التقدير</th><th>الجائزة</th><th>الترتيب</th></tr></thead>
-        <tbody>${annualRows.length ? annualRows.map((r) => `
+        <tbody>${
+          annualRows.length
+            ? annualRows
+                .map(
+                  (r) => `
           <tr>
             <td class="num">${r.year}هـ</td><td class="num">${r.totalHifz}</td><td class="num">${r.parts}</td>
             <td class="num">${r.totalScore}/100</td><td>${esc(r.grade)}</td>
             <td class="num">${r.prize ? r.prize.toLocaleString() + " ريال" : "-"}</td><td class="num">${esc(r.rank)}</td>
-          </tr>`).join("") : '<tr><td colspan="7" class="empty">لا توجد بيانات</td></tr>'}</tbody>
+          </tr>`,
+                )
+                .join("")
+            : '<tr><td colspan="7" class="empty">لا توجد بيانات</td></tr>'
+        }</tbody>
       </table>`;
 
     const monthlyTable = `
       <h2>المتابعة الشهرية عبر الأعوام</h2>
       <table>
         <thead><tr><th>العام</th><th>الأشهر النشطة</th><th>إجمالي الأوجه</th><th>متوسط الحفظ</th><th>متوسط المراجعة</th><th>المتوسط العام</th></tr></thead>
-        <tbody>${monthlySummary.length ? monthlySummary.map((s) => `
+        <tbody>${
+          monthlySummary.length
+            ? monthlySummary
+                .map(
+                  (s) => `
           <tr>
             <td class="num">${s.year}هـ</td><td class="num">${s.monthsWithData}</td><td class="num">${s.totalMemoPages}</td>
             <td class="num">${s.avgMemoScore}/40</td><td class="num">${s.avgReviewScore}/40</td><td class="num"><b>${s.avgTotal}/100</b></td>
-          </tr>`).join("") : '<tr><td colspan="6" class="empty">لا توجد بيانات</td></tr>'}</tbody>
+          </tr>`,
+                )
+                .join("")
+            : '<tr><td colspan="6" class="empty">لا توجد بيانات</td></tr>'
+        }</tbody>
       </table>`;
 
     const honorsTable = `
       <h2>التكريم والجوائز والشهادات</h2>
       <table>
         <thead><tr><th>النوع</th><th>العام</th><th>البيان</th><th>القيمة</th></tr></thead>
-        <tbody>${(awards.length + certificates.length) === 0 ? '<tr><td colspan="4" class="empty">لا توجد بيانات</td></tr>' : [
-          ...awards.map((a) => `<tr><td>${a.award_kind === "in_kind" ? "جائزة عينية" : "جائزة نقدية"}</td><td class="num">${esc(a.year)}هـ</td><td>${esc(a.item || a.award_type || "")}</td><td class="num">${a.amount ? a.amount.toLocaleString() : "-"}</td></tr>`),
-          ...certificates.map((c) => `<tr><td>شهادة تقدير</td><td class="num">${esc(c.year)}هـ</td><td>${esc(c.title || c.cert_type || "")}</td><td class="num">-</td></tr>`),
-        ].join("")}</tbody>
+        <tbody>${
+          awards.length + certificates.length === 0
+            ? '<tr><td colspan="4" class="empty">لا توجد بيانات</td></tr>'
+            : [
+                ...awards.map(
+                  (a) =>
+                    `<tr><td>${a.award_kind === "in_kind" ? "جائزة عينية" : "جائزة نقدية"}</td><td class="num">${esc(a.year)}هـ</td><td>${esc(a.item || a.award_type || "")}</td><td class="num">${a.amount ? a.amount.toLocaleString() : "-"}</td></tr>`,
+                ),
+                ...certificates.map(
+                  (c) =>
+                    `<tr><td>شهادة تقدير</td><td class="num">${esc(c.year)}هـ</td><td>${esc(c.title || c.cert_type || "")}</td><td class="num">-</td></tr>`,
+                ),
+              ].join("")
+        }</tbody>
       </table>`;
 
     return `
@@ -143,10 +179,10 @@ const Reports = () => {
         <img src="${logo}" style="height:60px" />
         <div>
           <h1>مركز إنماء الأهلي الخيري</h1>
-          <div class="sub">التقرير الشامل للطالبة</div>
+          <div class="sub">التقرير الشامل للطالب/طالبة</div>
         </div>
       </div>
-      <h2>الطالبة: ${esc(selected.name)} ${selected.teacher ? `— المعلمة: ${esc(selected.teacher)}` : ""}</h2>
+      <h2>الطالب/الطالبة: ${esc(selected.name)} ${selected.teacher ? `— المعلم/المعلمة: ${esc(selected.teacher)}` : ""}</h2>
       <div class="cards">
         <div class="card"><span>إجمالي الأجزاء المحفوظة</span><b>${totals.parts}</b></div>
         <div class="card"><span>إجمالي الجوائز</span><b>${totals.prize.toLocaleString()} ريال</b></div>
@@ -156,7 +192,7 @@ const Reports = () => {
       ${annualTable}
       ${monthlyTable}
       ${honorsTable}
-      <div class="thanks">بارك الله في الطالبة وثبّتها على حفظ كتابه الكريم</div>
+      <div class="thanks">بارك الله في الطالب/الطالبة وثبّتها على حفظ كتابه الكريم</div>
     `;
   };
 
@@ -175,7 +211,9 @@ const Reports = () => {
               <h1 className="text-lg font-bold text-primary flex items-center gap-2">
                 <FileText className="h-5 w-5" /> التقارير
               </h1>
-              <p className="text-xs text-muted-foreground">ابحث عن أي طالبة واطبع تقريرًا شاملًا يضم كل بياناتها</p>
+              <p className="text-xs text-muted-foreground">
+                ابحث عن أي طالب/طالبة واطبع تقريرًا شاملًا يضم كل بياناتها
+              </p>
             </div>
           </div>
         </Card>
@@ -186,7 +224,7 @@ const Reports = () => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="اكتب اسم الطالبة..."
+              placeholder="اكتب اسم الطالب/الطالبة..."
               className="rounded-xl pr-9"
             />
             {results.length > 0 && (
@@ -214,7 +252,9 @@ const Reports = () => {
             <Card className="flex flex-wrap items-center justify-between gap-3 border-primary/20 p-4">
               <div>
                 <h2 className="text-lg font-bold">{selected.name}</h2>
-                <p className="text-xs text-muted-foreground">{selected.teacher || "بلا معلمة"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {selected.teacher || "بلا معلم/معلمة"}
+                </p>
               </div>
               <Button onClick={handlePrint} className="gap-1.5">
                 <Printer className="h-4 w-4" /> طباعة التقرير الشامل
@@ -236,7 +276,9 @@ const Reports = () => {
               </Card>
               <Card className="border-primary/20 p-3 text-center">
                 <p className="text-xs text-muted-foreground">الشهادات والتكريم</p>
-                <p className="text-2xl font-black text-primary">{awards.length + certificates.length}</p>
+                <p className="text-2xl font-black text-primary">
+                  {awards.length + certificates.length}
+                </p>
               </Card>
             </div>
 
@@ -262,12 +304,16 @@ const Reports = () => {
                   <tbody>
                     {annualRows.map((r) => (
                       <tr key={r.year} className="odd:bg-secondary/20">
-                        <td className="border border-border p-2 text-center font-bold text-primary">{r.year}هـ</td>
+                        <td className="border border-border p-2 text-center font-bold text-primary">
+                          {r.year}هـ
+                        </td>
                         <td className="border border-border p-2 text-center">{r.totalHifz}</td>
                         <td className="border border-border p-2 text-center">{r.parts}</td>
                         <td className="border border-border p-2 text-center">{r.totalScore}/100</td>
                         <td className="border border-border p-2 text-center">{r.grade || "-"}</td>
-                        <td className="border border-border p-2 text-center">{r.prize ? r.prize.toLocaleString() : "-"}</td>
+                        <td className="border border-border p-2 text-center">
+                          {r.prize ? r.prize.toLocaleString() : "-"}
+                        </td>
                         <td className="border border-border p-2 text-center">{r.rank}</td>
                       </tr>
                     ))}
@@ -297,12 +343,20 @@ const Reports = () => {
                   <tbody>
                     {monthlySummary.map((s) => (
                       <tr key={s.year} className="odd:bg-secondary/20">
-                        <td className="border border-border p-2 text-center font-bold text-primary">{s.year}هـ</td>
+                        <td className="border border-border p-2 text-center font-bold text-primary">
+                          {s.year}هـ
+                        </td>
                         <td className="border border-border p-2 text-center">{s.monthsWithData}</td>
                         <td className="border border-border p-2 text-center">{s.totalMemoPages}</td>
-                        <td className="border border-border p-2 text-center">{s.avgMemoScore}/40</td>
-                        <td className="border border-border p-2 text-center">{s.avgReviewScore}/40</td>
-                        <td className="border border-border p-2 text-center font-bold text-islamic-green">{s.avgTotal}/100</td>
+                        <td className="border border-border p-2 text-center">
+                          {s.avgMemoScore}/40
+                        </td>
+                        <td className="border border-border p-2 text-center">
+                          {s.avgReviewScore}/40
+                        </td>
+                        <td className="border border-border p-2 text-center font-bold text-islamic-green">
+                          {s.avgTotal}/100
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -314,18 +368,29 @@ const Reports = () => {
               <div className="border-b border-border bg-secondary/30 px-4 py-2 text-sm font-bold text-primary flex items-center gap-1.5">
                 <AwardIcon className="h-4 w-4" /> التكريم والجوائز والشهادات
               </div>
-              {(awards.length + certificates.length) === 0 ? (
+              {awards.length + certificates.length === 0 ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">لا توجد بيانات</div>
               ) : (
                 <div className="divide-y divide-border">
                   {awards.map((a) => (
-                    <div key={`a-${a.id}`} className="flex items-center justify-between gap-2 px-4 py-2 text-sm">
-                      <span>{a.award_kind === "in_kind" ? "جائزة عينية" : "جائزة نقدية"} — {a.item || a.award_type || ""}</span>
-                      <Badge variant="secondary">{a.year}هـ{a.amount ? ` — ${a.amount.toLocaleString()} ريال` : ""}</Badge>
+                    <div
+                      key={`a-${a.id}`}
+                      className="flex items-center justify-between gap-2 px-4 py-2 text-sm"
+                    >
+                      <span>
+                        {a.award_kind === "in_kind" ? "جائزة عينية" : "جائزة نقدية"} —{" "}
+                        {a.item || a.award_type || ""}
+                      </span>
+                      <Badge variant="secondary">
+                        {a.year}هـ{a.amount ? ` — ${a.amount.toLocaleString()} ريال` : ""}
+                      </Badge>
                     </div>
                   ))}
                   {certificates.map((c) => (
-                    <div key={`c-${c.id}`} className="flex items-center justify-between gap-2 px-4 py-2 text-sm">
+                    <div
+                      key={`c-${c.id}`}
+                      className="flex items-center justify-between gap-2 px-4 py-2 text-sm"
+                    >
                       <span>شهادة تقدير — {c.title || c.cert_type || ""}</span>
                       <Badge variant="secondary">{c.year}هـ</Badge>
                     </div>
@@ -336,7 +401,7 @@ const Reports = () => {
           </>
         ) : (
           <Card className="border-dashed border-primary/30 p-10 text-center text-muted-foreground">
-            ابحث عن اسم طالبة لعرض وطباعة تقريرها الشامل
+            ابحث عن اسم طالب/طالبة لعرض وطباعة تقريرها الشامل
           </Card>
         )}
       </div>

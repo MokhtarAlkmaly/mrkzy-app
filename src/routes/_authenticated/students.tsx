@@ -4,10 +4,17 @@ import Students from "@/pages/Students";
 export const Route = createFileRoute("/_authenticated/students")({
   head: () => ({
     meta: [
-      { title: "الطالبات - نظام المسابقة الرمضانية" },
-      { name: "description", content: "الصفحة المركزية للطالبات، مرتبطة بكل صفحات النظام: المعلمات، المتابعة الشهرية، المسابقات، التكريم، الشهادات وغيرها." },
-      { property: "og:title", content: "الطالبات - نظام المسابقة الرمضانية" },
-      { property: "og:description", content: "الصفحة المركزية للطالبات، مرتبطة بكل صفحات النظام." },
+      { title: "الطلاب والطالبات - مركز إنماء الأهلي الخيري" },
+      {
+        name: "description",
+        content:
+          "الصفحة المركزية للطلاب والطالبات، مرتبطة بكل صفحات النظام: المعلمون والمعلمات، المتابعة الشهرية، المسابقات، التكريم، الشهادات وغيرها.",
+      },
+      { property: "og:title", content: "الطلاب والطالبات - مركز إنماء الأهلي الخيري" },
+      {
+        property: "og:description",
+        content: "الصفحة المركزية للطلاب والطالبات، مرتبطة بكل صفحات النظام.",
+      },
     ],
   }),
   component: Students,

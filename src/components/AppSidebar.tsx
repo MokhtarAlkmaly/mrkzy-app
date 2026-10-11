@@ -1,12 +1,34 @@
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@/lib/router-compat";
 import {
-  Trophy, GraduationCap, Users, Sparkles, Home as HomeIcon, Globe2, Award,
-  ScrollText, HeartHandshake, Receipt, Camera, BookOpenCheck, LayoutDashboard,
-  Settings as SettingsIcon, FileText, LayoutGrid, ArrowLeftRight,
+  Trophy,
+  GraduationCap,
+  Users,
+  Sparkles,
+  Home as HomeIcon,
+  Globe2,
+  Award,
+  ScrollText,
+  HeartHandshake,
+  Receipt,
+  Camera,
+  BookOpenCheck,
+  LayoutDashboard,
+  Settings as SettingsIcon,
+  FileText,
+  LayoutGrid,
+  ArrowLeftRight,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -31,7 +53,7 @@ const competitionItems: NavItem[] = [
 
 const otherItems: NavItem[] = [
   { to: "/awards", label: "التكريم", icon: Award },
-  { to: "/khatimat", label: "الخاتمات", icon: Sparkles },
+  { to: "/khatimat", label: "الخاتمون والخاتمات", icon: Sparkles },
   { to: "/certificates", label: "الشهادات", icon: ScrollText },
   { to: "/reports", label: "التقارير", icon: FileText },
   { to: "/donors", label: "الداعمون", icon: HeartHandshake },
@@ -45,11 +67,17 @@ const systemItems: NavItem[] = [
   { to: "/settings", label: "الإعدادات", icon: SettingsIcon },
 ];
 
-const switchItems: NavItem[] = [
-  { to: "/", label: "تبديل القسم", icon: ArrowLeftRight },
-];
+const switchItems: NavItem[] = [{ to: "/", label: "تبديل القسم", icon: ArrowLeftRight }];
 
-const NavGroup = ({ label, items, pathname }: { label: string; items: NavItem[]; pathname: string }) => (
+const NavGroup = ({
+  label,
+  items,
+  pathname,
+}: {
+  label: string;
+  items: NavItem[];
+  pathname: string;
+}) => (
   <SidebarGroup>
     <SidebarGroupLabel>{label}</SidebarGroupLabel>
     <SidebarGroupContent>

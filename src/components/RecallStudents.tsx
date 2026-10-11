@@ -3,7 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { History, Loader2, Users } from "lucide-react";
 import { listRecallCandidates, recallStudentsToYear, RecallCandidate } from "@/utils/storage";
@@ -46,7 +52,11 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
   const toggleAll = () => {
     const ids = filtered.map((c) => c.id);
     const allSelected = ids.every((id) => selected.includes(id));
-    setSelected(allSelected ? selected.filter((id) => !ids.includes(id)) : Array.from(new Set([...selected, ...ids])));
+    setSelected(
+      allSelected
+        ? selected.filter((id) => !ids.includes(id))
+        : Array.from(new Set([...selected, ...ids])),
+    );
   };
 
   const handleRecall = async () => {
@@ -56,12 +66,16 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
       const added = await recallStudentsToYear(currentYear, selected);
       toast({
         title: "تم الاستدعاء",
-        description: `تم استدعاء ${added} طالبة إلى عام ${currentYear}هـ مع ترحيل الحفظ السابق`,
+        description: `تم استدعاء ${added} طالب/طالبة إلى عام ${currentYear}هـ مع ترحيل الحفظ السابق`,
       });
       setOpen(false);
       await onRecalled();
     } catch (e) {
-      toast({ title: "خطأ", description: "تعذّر استدعاء الطالبات", variant: "destructive" });
+      toast({
+        title: "خطأ",
+        description: "تعذّر استدعاء الطلاب والطالبات",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -72,21 +86,22 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
       <DialogTrigger asChild>
         <Button variant="secondary" className="h-12 gap-2 rounded-2xl lg:col-span-2">
           <History className="h-4 w-4" />
-          استدعاء طالبة من الأعوام السابقة
+          استدعاء طالب/طالبة من الأعوام السابقة
         </Button>
       </DialogTrigger>
       <DialogContent dir="rtl" className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>استدعاء طالبات إلى عام {currentYear}هـ</DialogTitle>
+          <DialogTitle>استدعاء طلاب وطالبات إلى عام {currentYear}هـ</DialogTitle>
           <DialogDescription>
-            اختر الطالبات من الأعوام السابقة، وسيتم تسجيلهن في العام المختار مع نقل الإجمالي التراكمي كـ«حفظ سابق».
+            اختر الطلاب والطالبات من الأعوام السابقة، وسيتم تسجيلهم في العام المختار مع نقل الإجمالي
+            التراكمي كـ«حفظ سابق».
           </DialogDescription>
         </DialogHeader>
 
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="بحث بالاسم أو المعلمة..."
+          placeholder="بحث بالاسم أو المعلم/المعلمة..."
           className="h-10 rounded-xl"
         />
 
@@ -96,12 +111,16 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
           </div>
         ) : filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            لا توجد طالبات في أعوام سابقة غير مسجّلات في هذا العام
+            لا يوجد طلاب وطالبات في أعوام سابقة غير مسجّلين في هذا العام
           </p>
         ) : (
           <>
             <div className="flex items-center justify-between text-sm">
-              <button type="button" onClick={toggleAll} className="font-semibold text-primary hover:underline">
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="font-semibold text-primary hover:underline"
+              >
                 تحديد / إلغاء الكل ({filtered.length})
               </button>
               <span className="inline-flex items-center gap-1 text-muted-foreground">
@@ -114,10 +133,15 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
                   key={c.id}
                   className="flex cursor-pointer items-center gap-3 rounded-lg p-2 text-sm hover:bg-secondary/50"
                 >
-                  <Checkbox checked={selected.includes(c.id)} onCheckedChange={() => toggle(c.id)} />
+                  <Checkbox
+                    checked={selected.includes(c.id)}
+                    onCheckedChange={() => toggle(c.id)}
+                  />
                   <span className="flex-1 font-semibold">{c.name || "بدون اسم"}</span>
                   <span className="text-xs text-muted-foreground">{c.teacher || "—"}</span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">آخر عام: {c.lastYear}هـ</span>
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
+                    آخر عام: {c.lastYear}هـ
+                  </span>
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
                     حفظ سابق: {c.baseHifz}
                   </span>
@@ -128,8 +152,16 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
         )}
 
         <DialogFooter>
-          <Button onClick={handleRecall} disabled={selected.length === 0 || saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}
+          <Button
+            onClick={handleRecall}
+            disabled={selected.length === 0 || saving}
+            className="gap-2"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <History className="h-4 w-4" />
+            )}
             استدعاء المحدد
           </Button>
         </DialogFooter>

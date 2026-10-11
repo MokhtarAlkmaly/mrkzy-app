@@ -32,6 +32,9 @@ jobs:
       - name: تثبيت حزم المشروع
         run: npm install
 
+      - name: فحص الأنواع (TypeScript)
+        run: npm run typecheck
+
       - name: بناء ملفات الويب
         run: npm run build
         env:

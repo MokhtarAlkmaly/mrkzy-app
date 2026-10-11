@@ -2,12 +2,34 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@/lib/router-compat";
-import { ArrowRight, Plus, Pencil, Trash2, Save, Calendar, Trophy, Globe2, Home as HomeIcon } from "lucide-react";
+import {
+  ArrowRight,
+  Plus,
+  Pencil,
+  Trash2,
+  Save,
+  Calendar,
+  Trophy,
+  Globe2,
+  Home as HomeIcon,
+} from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import { loadGlobalStudents, getActiveYear, setActiveYear } from "@/utils/storage";
@@ -78,7 +100,7 @@ const StudentCompetition = ({ type }: Props) => {
       setRows((data as CompetitionRow[]) || []);
     }
     setLoading(false);
-  }, [currentYear, user, type]);
+  }, [currentYear, user, type, toast]);
 
   const loadAllStudentsSafe = async () => {
     try {
@@ -91,9 +113,11 @@ const StudentCompetition = ({ type }: Props) => {
   useEffect(() => {
     void (async () => setCurrentYear(await getActiveYear()))();
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  // فتح نافذة الإضافة تلقائيًا إن جاء المستخدم من "صفحة الطالبات" باسم طالبة محددة
+  // فتح نافذة الإضافة تلقائيًا إن جاء المستخدم من "صفحة الطلاب والطالبات" باسم طالب/طالبة محددة
   useEffect(() => {
     if (loading) return;
     const pendingName = consumePendingStudentLink();
@@ -102,12 +126,15 @@ const StudentCompetition = ({ type }: Props) => {
       setEditingId(null);
       setDialogOpen(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
 
   const studentNames = useMemo(
-    () => students.map((s) => s.name).filter(Boolean).sort((a, b) => a.localeCompare(b, "ar")),
-    [students]
+    () =>
+      students
+        .map((s) => s.name)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "ar")),
+    [students],
   );
 
   const openAdd = () => {
@@ -133,7 +160,7 @@ const StudentCompetition = ({ type }: Props) => {
   const save = async () => {
     if (!user) return;
     if (!form.student_name.trim()) {
-      toast({ title: "اسم الطالبة مطلوب", variant: "destructive" });
+      toast({ title: "اسم الطالب/الطالبة مطلوب", variant: "destructive" });
       return;
     }
     const payload = {
@@ -172,13 +199,16 @@ const StudentCompetition = ({ type }: Props) => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]" dir="rtl">
+    <div
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
+      dir="rtl"
+    >
       <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
         <div className="container mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-4">
             <Link to="/students">
               <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
-                <ArrowRight className="h-4 w-4" /> رجوع لصفحة الطالبات
+                <ArrowRight className="h-4 w-4" /> رجوع لصفحة الطلاب والطالبات
               </Button>
             </Link>
             <img src={logo} alt="الشعار" className="h-16 w-auto" />
@@ -188,7 +218,9 @@ const StudentCompetition = ({ type }: Props) => {
             <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
               <Icon className="h-6 w-6" /> {title}
             </h1>
-            <p className="text-sm opacity-90 mt-1">عام {currentYear}هـ — {rows.length} سجل</p>
+            <p className="text-sm opacity-90 mt-1">
+              عام {currentYear}هـ — {rows.length} سجل
+            </p>
           </div>
         </div>
       </header>
@@ -198,16 +230,30 @@ const StudentCompetition = ({ type }: Props) => {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
             <span className="text-sm">العام:</span>
-            <Select value={currentYear} onValueChange={(v) => { setCurrentYear(v); void setActiveYear(v); }}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <Select
+              value={currentYear}
+              onValueChange={(v) => {
+                setCurrentYear(v);
+                void setActiveYear(v);
+              }}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i).map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}هـ</SelectItem>
-                ))}
+                {Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i).map(
+                  (y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}هـ
+                    </SelectItem>
+                  ),
+                )}
               </SelectContent>
             </Select>
           </div>
-          <Button className="gap-1" onClick={openAdd}><Plus className="h-4 w-4" /> إضافة سجل</Button>
+          <Button className="gap-1" onClick={openAdd}>
+            <Plus className="h-4 w-4" /> إضافة سجل
+          </Button>
         </div>
 
         {loading ? (
@@ -220,7 +266,7 @@ const StudentCompetition = ({ type }: Props) => {
               <thead className="bg-primary/5">
                 <tr>
                   <th className="px-3 py-2 text-right">#</th>
-                  <th className="px-3 py-2 text-right">الطالبة</th>
+                  <th className="px-3 py-2 text-right">الطالب/الطالبة</th>
                   <th className="px-3 py-2 text-right">عنوان المسابقة</th>
                   <th className="px-3 py-2 text-right">الجهة المنظمة</th>
                   <th className="px-3 py-2 text-center">الترتيب</th>
@@ -237,7 +283,14 @@ const StudentCompetition = ({ type }: Props) => {
                     <td className="px-3 py-2">{r.title || "—"}</td>
                     <td className="px-3 py-2">{r.organizer || "—"}</td>
                     <td className="px-3 py-2 text-center">
-                      {r.rank ? <span className="inline-flex items-center gap-1 font-bold text-amber-600"><Trophy className="h-3 w-3" />{r.rank}</span> : "—"}
+                      {r.rank ? (
+                        <span className="inline-flex items-center gap-1 font-bold text-amber-600">
+                          <Trophy className="h-3 w-3" />
+                          {r.rank}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-3 py-2 text-center">{r.score || "—"}</td>
                     <td className="px-3 py-2 text-center text-xs">{r.held_at}</td>
@@ -266,50 +319,87 @@ const StudentCompetition = ({ type }: Props) => {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium">اسم الطالبة</label>
+              <label className="text-sm font-medium">اسم الطالب/الطالبة</label>
               {studentNames.length > 0 ? (
-                <Select value={form.student_name} onValueChange={(v) => setForm({ ...form, student_name: v })}>
-                  <SelectTrigger><SelectValue placeholder="اختر الطالبة" /></SelectTrigger>
+                <Select
+                  value={form.student_name}
+                  onValueChange={(v) => setForm({ ...form, student_name: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الطالب/الطالبة" />
+                  </SelectTrigger>
                   <SelectContent>
-                    {studentNames.map((n) => (<SelectItem key={n} value={n}>{n}</SelectItem>))}
+                    {studentNames.map((n) => (
+                      <SelectItem key={n} value={n}>
+                        {n}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               ) : (
-                <Input value={form.student_name} onChange={(e) => setForm({ ...form, student_name: e.target.value })} />
+                <Input
+                  value={form.student_name}
+                  onChange={(e) => setForm({ ...form, student_name: e.target.value })}
+                />
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium">عنوان المسابقة</label>
-                <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">الجهة المنظمة</label>
-                <Input value={form.organizer} onChange={(e) => setForm({ ...form, organizer: e.target.value })} />
+                <Input
+                  value={form.organizer}
+                  onChange={(e) => setForm({ ...form, organizer: e.target.value })}
+                />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-sm font-medium">الترتيب</label>
-                <Input value={form.rank} onChange={(e) => setForm({ ...form, rank: e.target.value })} placeholder="مثال: الأول" />
+                <Input
+                  value={form.rank}
+                  onChange={(e) => setForm({ ...form, rank: e.target.value })}
+                  placeholder="مثال: الأول"
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">الدرجة</label>
-                <Input value={form.score} onChange={(e) => setForm({ ...form, score: e.target.value })} />
+                <Input
+                  value={form.score}
+                  onChange={(e) => setForm({ ...form, score: e.target.value })}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">التاريخ</label>
-                <Input type="date" value={form.held_at} onChange={(e) => setForm({ ...form, held_at: e.target.value })} />
+                <Input
+                  type="date"
+                  value={form.held_at}
+                  onChange={(e) => setForm({ ...form, held_at: e.target.value })}
+                />
               </div>
             </div>
             <div>
               <label className="text-sm font-medium">ملاحظات</label>
-              <Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <Textarea
+                rows={2}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => void save()} className="gap-1"><Save className="h-4 w-4" /> حفظ</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={() => void save()} className="gap-1">
+              <Save className="h-4 w-4" /> حفظ
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

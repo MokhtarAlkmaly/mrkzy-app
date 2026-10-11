@@ -1,3 +1,5 @@
+import type { AyahNo, Surah } from "quran-meta";
+
 export interface SurahOption {
   number: number;
   name: string;
@@ -122,7 +124,8 @@ export const SURAH_LIST: SurahOption[] = [
   { number: 111, name: "المسد", ayahCount: 5 },
   { number: 112, name: "الإخلاص", ayahCount: 4 },
   { number: 113, name: "الفلق", ayahCount: 5 },
-  { number: 114, name: "الناس", ayahCount: 6 },];
+  { number: 114, name: "الناس", ayahCount: 6 },
+];
 
 export const getSurahList = (): SurahOption[] => SURAH_LIST;
 
@@ -136,21 +139,25 @@ export const getAyahCount = (surah: number): number => {
 // كسول (lazy) ومحمية بالكامل: أي فشل بها لا يؤثر على القوائم المنسدلة
 // أعلاه (اللي تعمل دائماً من البيانات الثابتة المضمَّنة)، وبس ميزة
 // "حساب الأوجه التلقائي" تتعطل بهدوء وتحتاج إدخال يدوي عندها.
-let hafsInstance: any = null;
+type HafsInstance = import("quran-meta").QuranRiwaya<import("quran-meta").RiwayaName>;
 
-const getHafs = async () => {
+let hafsInstance: HafsInstance | null = null;
+
+const getHafs = async (): Promise<HafsInstance> => {
   if (!hafsInstance) {
-    const { QuranRiwaya } = await import("quran-meta");
-    hafsInstance = QuranRiwaya.hafs();
+    const { createHafs } = await import("quran-meta");
+    hafsInstance = createHafs();
   }
-  return hafsInstance;
+  const instance = hafsInstance;
+  if (!instance) throw new Error("quran-meta غير متاح");
+  return instance;
 };
 
 export const getPageForAyahAsync = async (surah: number, ayah: number): Promise<number | null> => {
   if (!surah || !ayah) return null;
   try {
     const hafs = await getHafs();
-    const ayahId = hafs.findAyahIdBySurah(surah, ayah);
+    const ayahId = hafs.findAyahIdBySurah(surah as Surah, ayah as AyahNo);
     const meta = hafs.getAyahMeta(ayahId);
     return meta.page ?? null;
   } catch (e) {
@@ -164,13 +171,15 @@ export const getPageForAyahAsync = async (surah: number, ayah: number): Promise<
 const pageCache = new Map<string, number | null>();
 
 export const warmupPageCache = async (points: { surah: number; ayah: number }[]) => {
-  await Promise.all(points.map(async ({ surah, ayah }) => {
-    if (!surah || !ayah) return;
-    const key = `${surah}:${ayah}`;
-    if (pageCache.has(key)) return;
-    const page = await getPageForAyahAsync(surah, ayah);
-    pageCache.set(key, page);
-  }));
+  await Promise.all(
+    points.map(async ({ surah, ayah }) => {
+      if (!surah || !ayah) return;
+      const key = `${surah}:${ayah}`;
+      if (pageCache.has(key)) return;
+      const page = await getPageForAyahAsync(surah, ayah);
+      pageCache.set(key, page);
+    }),
+  );
 };
 
 export const getPageForAyah = (surah: number, ayah: number): number | null => {
@@ -186,7 +195,7 @@ export const calcPagesBetween = (
   fromSurah: number,
   fromAyah: number,
   toSurah: number,
-  toAyah: number
+  toAyah: number,
 ): number => {
   const fromPage = getPageForAyah(fromSurah, fromAyah);
   const toPage = getPageForAyah(toSurah, toAyah);
@@ -198,7 +207,7 @@ export const calcPagesBetweenAsync = async (
   fromSurah: number,
   fromAyah: number,
   toSurah: number,
-  toAyah: number
+  toAyah: number,
 ): Promise<number> => {
   const [fromPage, toPage] = await Promise.all([
     getPageForAyahAsync(fromSurah, fromAyah),

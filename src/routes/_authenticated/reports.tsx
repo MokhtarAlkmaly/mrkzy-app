@@ -4,8 +4,12 @@ import Reports from "@/pages/Reports";
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
-      { title: "التقارير - نظام المسابقة الرمضانية" },
-      { name: "description", content: "ابحث عن أي طالبة واطبع تقريرًا شاملًا يضم كل بياناتها: المسابقة الرمضانية، المتابعة الشهرية، والتكريم." },
+      { title: "التقارير - مركز إنماء الأهلي الخيري" },
+      {
+        name: "description",
+        content:
+          "ابحث عن أي طالب/طالبة واطبع تقريرًا شاملًا يضم كل بياناتها: المسابقة الرمضانية، المتابعة الشهرية، والتكريم.",
+      },
     ],
   }),
   component: Reports,

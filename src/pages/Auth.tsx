@@ -44,12 +44,14 @@ const Auth = () => {
         });
         setIsLogin(true);
       }
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "حدث خطأ غير متوقع";
       toast({
         title: "خطأ",
-        description: error.message === "Invalid login credentials"
-          ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-          : error.message,
+        description:
+          message === "Invalid login credentials"
+            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+            : message,
         variant: "destructive",
       });
     } finally {
@@ -58,13 +60,16 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.18),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.55))] flex items-center justify-center p-4" dir="rtl">
+    <div
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.18),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.55))] flex items-center justify-center p-4"
+      dir="rtl"
+    >
       <Card className="w-full max-w-md rounded-[2rem] border-white/70 bg-card/90 p-8 shadow-2xl shadow-primary/10 backdrop-blur space-y-6">
         <div className="flex flex-col items-center gap-3">
           <div className="rounded-3xl bg-primary/5 p-3 ring-1 ring-primary/10">
             <img src={logo} alt="الشعار" className="h-20 w-auto" />
           </div>
-          <h1 className="text-2xl font-black text-primary">كشف المسابقة الرمضانية</h1>
+          <h1 className="text-2xl font-black text-primary">مركز إنماء الأهلي الخيري</h1>
           <p className="text-muted-foreground text-sm">
             {isLogin ? "سجّل دخولك للوصول إلى البيانات" : "أنشئ حساباً جديداً"}
           </p>
@@ -98,7 +103,11 @@ const Auth = () => {
             />
           </div>
 
-          <Button type="submit" className="h-12 w-full gap-2 rounded-2xl shadow-lg shadow-primary/20" disabled={loading}>
+          <Button
+            type="submit"
+            className="h-12 w-full gap-2 rounded-2xl shadow-lg shadow-primary/20"
+            disabled={loading}
+          >
             {isLogin ? <LogIn className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
             {loading ? "جارٍ المعالجة..." : isLogin ? "تسجيل الدخول" : "إنشاء حساب"}
           </Button>

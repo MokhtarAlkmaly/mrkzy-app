@@ -36,3 +36,6 @@ dist-ssr
 
 # ملف SQLite/WASM يُنسخ تلقائيًا عبر postinstall (scripts/copy-sqlite-wasm.mjs)
 public/assets/sql-wasm.wasm
+
+# متغيرات البيئة — تُنسخ من .env.example ولا تُلتزم في المستودع
+.env

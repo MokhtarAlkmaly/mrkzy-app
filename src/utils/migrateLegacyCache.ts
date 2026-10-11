@@ -24,7 +24,20 @@ import {
   cacheCeremonyExpenses,
   cacheCertificates,
   cacheMedia,
+  type CachedStudent,
+  type CachedHifzRow,
+  type CachedYearData,
+  type CachedTeacher,
+  type CachedTeacherBonus,
+  type CachedDonor,
+  type CachedAward,
+  type CachedCeremonyExpense,
+  type CachedCertificate,
+  type CachedMedia,
+  type PendingChange,
 } from "./localDB";
+
+type LegacySetting = { key: string; value: unknown };
 
 const LEGACY_DB_NAME = "inmaa_cache";
 const MIGRATION_FLAG_KEY = "__migrated_from_indexeddb__";
@@ -99,21 +112,31 @@ export const migrateLegacyIndexedDbCache = async (): Promise<void> => {
     }
 
     const [
-      students, hifzHistory, yearData, settings, pending,
-      teachers, teacherBonuses, donors, awards, ceremonyExpenses, certificates, media,
+      students,
+      hifzHistory,
+      yearData,
+      settings,
+      pending,
+      teachers,
+      teacherBonuses,
+      donors,
+      awards,
+      ceremonyExpenses,
+      certificates,
+      media,
     ] = await Promise.all([
-      readAll<any>(legacyDb, LEGACY_STORES.students),
-      readAll<any>(legacyDb, LEGACY_STORES.hifzHistory),
-      readAll<any>(legacyDb, LEGACY_STORES.yearData),
-      readAll<any>(legacyDb, LEGACY_STORES.settings),
-      readAll<any>(legacyDb, LEGACY_STORES.pending),
-      readAll<any>(legacyDb, LEGACY_STORES.teachers),
-      readAll<any>(legacyDb, LEGACY_STORES.teacherBonuses),
-      readAll<any>(legacyDb, LEGACY_STORES.donors),
-      readAll<any>(legacyDb, LEGACY_STORES.awards),
-      readAll<any>(legacyDb, LEGACY_STORES.ceremonyExpenses),
-      readAll<any>(legacyDb, LEGACY_STORES.certificates),
-      readAll<any>(legacyDb, LEGACY_STORES.media),
+      readAll<CachedStudent>(legacyDb, LEGACY_STORES.students),
+      readAll<CachedHifzRow>(legacyDb, LEGACY_STORES.hifzHistory),
+      readAll<CachedYearData>(legacyDb, LEGACY_STORES.yearData),
+      readAll<LegacySetting>(legacyDb, LEGACY_STORES.settings),
+      readAll<PendingChange>(legacyDb, LEGACY_STORES.pending),
+      readAll<CachedTeacher>(legacyDb, LEGACY_STORES.teachers),
+      readAll<CachedTeacherBonus>(legacyDb, LEGACY_STORES.teacherBonuses),
+      readAll<CachedDonor>(legacyDb, LEGACY_STORES.donors),
+      readAll<CachedAward>(legacyDb, LEGACY_STORES.awards),
+      readAll<CachedCeremonyExpense>(legacyDb, LEGACY_STORES.ceremonyExpenses),
+      readAll<CachedCertificate>(legacyDb, LEGACY_STORES.certificates),
+      readAll<CachedMedia>(legacyDb, LEGACY_STORES.media),
     ]);
     legacyDb.close();
 

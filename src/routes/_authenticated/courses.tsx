@@ -5,7 +5,10 @@ export const Route = createFileRoute("/_authenticated/courses")({
   head: () => ({
     meta: [
       { title: "الدورات - التدريب والتأهيل" },
-      { name: "description", content: "إدارة الدورات التعليمية والمهنية: خياطة، قيادة، نقش، روضة أطفال." },
+      {
+        name: "description",
+        content: "إدارة الدورات التعليمية والمهنية: خياطة، قيادة، نقش، روضة أطفال.",
+      },
     ],
   }),
   component: Courses,

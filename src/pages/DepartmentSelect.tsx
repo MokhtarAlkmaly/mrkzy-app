@@ -13,7 +13,12 @@ const DepartmentSelect = () => {
       dir="rtl"
     >
       <div className="absolute top-4 left-4">
-        <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => void signOut()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1 text-muted-foreground"
+          onClick={() => void signOut()}
+        >
           <LogOut className="h-4 w-4" /> خروج
         </Button>
       </div>
@@ -28,7 +33,8 @@ const DepartmentSelect = () => {
             <BookOpenText className="h-12 w-12 mx-auto mb-4 opacity-90" />
             <h2 className="text-xl font-bold">قسم القرآن الكريم</h2>
             <p className="text-sm opacity-85 mt-2">
-              الطلاب والطالبات، المعلمين، المتابعة الشهرية، المسابقة الرمضانية، التكريم، والخاتمات
+              الطلاب والطالبات، المعلمين، المتابعة الشهرية، المسابقة الرمضانية، التكريم، والخاتمون
+              والخاتمات
             </p>
           </div>
         </Link>

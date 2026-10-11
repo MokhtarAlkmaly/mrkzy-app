@@ -23,6 +23,22 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      // السماح بأي host (بما في ذلك بروكسي المعاينة) — التقييد الافتراضي
+      // للبيئة فقط يقبل hosts معروفة مسبقًا
+      allowedHosts: true,
+    },
+    resolve: {
+      alias: [
+        // jspdf v3 exposes only "node" and "browser" export conditions, while the
+        // SSR build (nitro/workerd) matches neither — resolution fails and breaks
+        // the production build. Point it at the browser ESM build explicitly.
+        // (Safe: it is only ever used by client-side printing in src/utils/nativePrint.ts)
+        { find: /^jspdf$/, replacement: "jspdf/dist/jspdf.es.min.js" },
+      ],
+    },
+  },
   ...(isVercel
     ? { nitro: { preset: "vercel" } }
     : isCapacitorBuild

@@ -6,31 +6,39 @@ export interface YearMonthlySummary {
   year: number;
   monthsWithData: number;
   totalMemoPages: number;
-  avgMemoScore: number;    // من 40
-  avgReviewScore: number;  // من 40
-  avgAttendance: number;   // من 10
-  avgBehavior: number;     // من 10
-  avgTotal: number;        // من 100
+  avgMemoScore: number; // من 40
+  avgReviewScore: number; // من 40
+  avgAttendance: number; // من 10
+  avgBehavior: number; // من 10
+  avgTotal: number; // من 100
 }
 
 /**
- * يجمع بيانات المتابعة الشهرية لطالبة عبر كل الأعوام في صف واحد لكل عام
+ * يجمع بيانات المتابعة الشهرية لطالب/طالبة عبر كل الأعوام في صف واحد لكل عام
  * (متوسط الدرجات وإجمالي الصفحات المحفوظة)، ليُعرض كجدول واحد يلخّص مسيرتها.
  */
-export const loadMultiYearMonthlySummary = async (studentId: number): Promise<YearMonthlySummary[]> => {
+export const loadMultiYearMonthlySummary = async (
+  studentId: number,
+): Promise<YearMonthlySummary[]> => {
   const results: YearMonthlySummary[] = [];
 
   for (let year = START_YEAR; year <= END_YEAR; year++) {
     const data = await loadMonthlyTrackingForStudent(year.toString(), studentId);
     let totalPages = 0;
-    let memoSum = 0, reviewSum = 0, attSum = 0, behSum = 0, count = 0;
+    let memoSum = 0,
+      reviewSum = 0,
+      attSum = 0,
+      behSum = 0,
+      count = 0;
 
     for (const m of TRACKING_MONTHS) {
       const record = data[m.value];
       if (!record) continue;
 
-      const memo = (parseFloat(record.memoHifzScore) || 0) + (parseFloat(record.memoRecitationScore) || 0);
-      const review = (parseFloat(record.reviewHifzScore) || 0) + (parseFloat(record.reviewRecitationScore) || 0);
+      const memo =
+        (parseFloat(record.memoHifzScore) || 0) + (parseFloat(record.memoRecitationScore) || 0);
+      const review =
+        (parseFloat(record.reviewHifzScore) || 0) + (parseFloat(record.reviewRecitationScore) || 0);
       const attendance = parseFloat(record.attendanceScore) || 0;
       const behavior = parseFloat(record.behaviorScore) || 0;
       const hasMemoRange = !!(record.memoFrom?.surah && record.memoTo?.surah);
@@ -44,7 +52,10 @@ export const loadMultiYearMonthlySummary = async (studentId: number): Promise<Ye
       behSum += behavior;
       if (hasMemoRange) {
         totalPages += await calcPagesBetweenAsync(
-          record.memoFrom.surah!, record.memoFrom.ayah!, record.memoTo.surah!, record.memoTo.ayah!
+          record.memoFrom.surah!,
+          record.memoFrom.ayah!,
+          record.memoTo.surah!,
+          record.memoTo.ayah!,
         );
       }
     }

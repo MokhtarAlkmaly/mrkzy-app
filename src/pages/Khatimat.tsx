@@ -26,7 +26,7 @@ const Khatimat = () => {
     return entries.filter((e) => e.name.includes(q));
   }, [entries, query]);
 
-  // إحصائيات: عدد الخاتمات بكل عام
+  // إحصائيات: عدد الخاتمين والخاتمات بكل عام
   const byYear = useMemo(() => {
     const map = new Map<string, number>();
     entries.forEach((e) => map.set(e.year, (map.get(e.year) || 0) + 1));
@@ -38,13 +38,15 @@ const Khatimat = () => {
       <img src="${logo}" class="logo" />
       <div>
         <h1>مركز إنماء الأهلي الخيري</h1>
-        <div class="sub">كشف الخاتمات — إجمالي ${entries.length} طالبة</div>
+        <div class="sub">كشف الخاتمين والخاتمات — إجمالي ${entries.length} طالب/طالبة</div>
       </div>
     </div>
     <table>
-      <thead><tr><th>م</th><th>الاسم</th><th>المعلمة</th><th>عام الختم</th><th>المجموع</th><th>التقدير</th></tr></thead>
+      <thead><tr><th>م</th><th>الاسم</th><th>المعلم/المعلمة</th><th>عام الختم</th><th>المجموع</th><th>التقدير</th></tr></thead>
       <tbody>
-        ${filtered.map((e, i) => `
+        ${filtered
+          .map(
+            (e, i) => `
           <tr>
             <td class="num">${i + 1}</td>
             <td>${esc(e.name)}</td>
@@ -52,17 +54,19 @@ const Khatimat = () => {
             <td class="num">${esc(e.year)}هـ</td>
             <td class="num">${esc(e.totalScore)}</td>
             <td>${esc(e.grade)}</td>
-          </tr>`).join("")}
+          </tr>`,
+          )
+          .join("")}
       </tbody>
     </table>
-    <div class="thanks">بارك الله في الطالبات الخاتمات، وجعل القرآن حجّة لهن لا عليهن</div>
+    <div class="thanks">بارك الله في الطلاب والطالبات الخاتمين والخاتمات، وجعل القرآن حجّة لهم لا عليهم</div>
   `;
 
-  const handlePrint = () => printHtml("كشف الخاتمات", buildBody());
+  const handlePrint = () => printHtml("كشف الخاتمين والخاتمات", buildBody());
 
   const handleShare = async () => {
     const { printHtmlDocument } = await import("@/utils/nativePrint");
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كشف الخاتمات</title>
+    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كشف الخاتمين والخاتمات</title>
       <style>
         body{font-family:Tahoma,Arial,sans-serif;padding:20px;color:#222}
         h1{text-align:center;color:#0e6b3a}
@@ -70,7 +74,7 @@ const Khatimat = () => {
         th,td{border:1px solid #999;padding:5px;text-align:center}
         th{background:#0e6b3a;color:#fff}
       </style></head><body>${buildBody()}</body></html>`;
-    await printHtmlDocument(html, "كشف_الخاتمات");
+    await printHtmlDocument(html, "كشف_الخاتمين_والخاتمات");
   };
 
   return (
@@ -81,25 +85,36 @@ const Khatimat = () => {
             <img src={logo} alt="شعار المركز" className="h-12 w-12 object-contain" />
             <div>
               <h1 className="flex items-center gap-1.5 text-lg font-bold text-primary">
-                <Sparkles className="h-4 w-4 text-amber-500" /> كشف الخاتمات
+                <Sparkles className="h-4 w-4 text-amber-500" /> كشف الخاتمين والخاتمات
               </h1>
-              <p className="text-xs text-muted-foreground">يتحدّث تلقائياً كل ما طالبة تختم القرآن الكريم بأي عام</p>
+              <p className="text-xs text-muted-foreground">
+                يتحدّث تلقائياً كل ما طالب/طالبة تختم القرآن الكريم بأي عام
+              </p>
             </div>
           </div>
           <Link to="/quran">
-            <Button variant="outline" size="sm" className="gap-1"><Home className="h-4 w-4" /> الرئيسية</Button>
+            <Button variant="outline" size="sm" className="gap-1">
+              <Home className="h-4 w-4" /> الرئيسية
+            </Button>
           </Link>
         </Card>
 
         {!loading && entries.length > 0 && (
           <Card className="flex flex-wrap items-center justify-between gap-3 border-primary/20 p-4">
             <div className="flex gap-2 print:hidden">
-              <Button onClick={handlePrint} size="sm" variant="outline" className="gap-1.5"><Printer className="h-4 w-4" /> طباعة</Button>
-              <Button onClick={handleShare} size="sm" className="gap-1.5"><Share2 className="h-4 w-4" /> مشاركة</Button>
+              <Button onClick={handlePrint} size="sm" variant="outline" className="gap-1.5">
+                <Printer className="h-4 w-4" /> طباعة
+              </Button>
+              <Button onClick={handleShare} size="sm" className="gap-1.5">
+                <Share2 className="h-4 w-4" /> مشاركة
+              </Button>
             </div>
             <div className="flex flex-wrap gap-2">
               {byYear.map(([y, c]) => (
-                <span key={y} className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                <span
+                  key={y}
+                  className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800"
+                >
                   {y}هـ: {c}
                 </span>
               ))}
@@ -113,7 +128,7 @@ const Khatimat = () => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث عن طالبة..."
+              placeholder="ابحث عن طالب/طالبة..."
               className="rounded-xl pr-9"
             />
           </div>
@@ -126,7 +141,7 @@ const Khatimat = () => {
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-10 text-center text-muted-foreground">
-              {query ? "لا توجد نتائج مطابقة" : "لا توجد طالبات خاتمات مسجّلات بعد"}
+              {query ? "لا توجد نتائج مطابقة" : "لا توجد ختمات مسجّلة بعد"}
             </div>
           ) : (
             <table className="w-full min-w-[600px] border-collapse text-sm">
@@ -134,7 +149,7 @@ const Khatimat = () => {
                 <tr className="bg-primary text-primary-foreground">
                   <th className="border border-border p-2">م</th>
                   <th className="border border-border p-2">الاسم</th>
-                  <th className="border border-border p-2">المعلمة</th>
+                  <th className="border border-border p-2">المعلم/المعلمة</th>
                   <th className="border border-border p-2">عام الختم</th>
                   <th className="border border-border p-2">المجموع</th>
                   <th className="border border-border p-2">التقدير</th>
@@ -145,8 +160,12 @@ const Khatimat = () => {
                   <tr key={`${e.studentId}-${e.year}`} className="odd:bg-secondary/20">
                     <td className="border border-border p-2 text-center">{i + 1}</td>
                     <td className="border border-border p-2 font-bold">{e.name}</td>
-                    <td className="border border-border p-2 text-muted-foreground">{e.teacher || "-"}</td>
-                    <td className="border border-border p-2 text-center font-bold text-islamic-green">{e.year}هـ</td>
+                    <td className="border border-border p-2 text-muted-foreground">
+                      {e.teacher || "-"}
+                    </td>
+                    <td className="border border-border p-2 text-center font-bold text-islamic-green">
+                      {e.year}هـ
+                    </td>
                     <td className="border border-border p-2 text-center">{e.totalScore || "-"}</td>
                     <td className="border border-border p-2 text-center">{e.grade || "-"}</td>
                   </tr>

@@ -4,9 +4,13 @@ import MonthlyTrackingSearch from "@/pages/MonthlyTrackingSearch";
 export const Route = createFileRoute("/monthly-search")({
   head: () => ({
     meta: [
-      { title: "بحث المتابعة الشهرية - نظام المسابقة الرمضانية" },
-      { name: "description", content: "سجل المتابعة الشهرية الكامل للطالبة خلال أشهر العام، بمقارنة نسب التقدم بالحفظ والمراجعة، قابل للطباعة والمشاركة." },
-      { property: "og:title", content: "بحث المتابعة الشهرية - نظام المسابقة الرمضانية" },
+      { title: "بحث المتابعة الشهرية - مركز إنماء الأهلي الخيري" },
+      {
+        name: "description",
+        content:
+          "سجل المتابعة الشهرية الكامل للطالب/طالبة خلال أشهر العام، بمقارنة نسب التقدم بالحفظ والمراجعة، قابل للطباعة والمشاركة.",
+      },
+      { property: "og:title", content: "بحث المتابعة الشهرية - مركز إنماء الأهلي الخيري" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

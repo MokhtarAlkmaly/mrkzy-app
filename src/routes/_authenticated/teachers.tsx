@@ -4,10 +4,19 @@ import Teachers from "@/pages/Teachers";
 export const Route = createFileRoute("/_authenticated/teachers")({
   head: () => ({
     meta: [
-      { title: "المعلمات والإكراميات - نظام المسابقة الرمضانية" },
-      { name: "description", content: "إدارة المعلمات وإكرامياتهن الشهرية في المسابقة الرمضانية." },
-      { property: "og:title", content: "المعلمات والإكراميات - نظام المسابقة الرمضانية" },
-      { property: "og:description", content: "إدارة المعلمات وإكرامياتهن الشهرية في المسابقة الرمضانية." },
+      { title: "المعلمون والمعلمات والإكراميات - مركز إنماء الأهلي الخيري" },
+      {
+        name: "description",
+        content: "إدارة المعلمين والمعلمات وإكرامياتهم الشهرية في المسابقة الرمضانية.",
+      },
+      {
+        property: "og:title",
+        content: "المعلمون والمعلمات والإكراميات - مركز إنماء الأهلي الخيري",
+      },
+      {
+        property: "og:description",
+        content: "إدارة المعلمين والمعلمات وإكرامياتهم الشهرية في المسابقة الرمضانية.",
+      },
     ],
   }),
   component: Teachers,

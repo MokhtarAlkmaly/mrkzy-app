@@ -36,5 +36,13 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  // مكونات shadcn/ui القياسية (نمط معروف) وأدوات توافقية/سياقية تصدّر دوالًا
+  // ومكونات معًا — تحذير fast-refresh فيها متوقع ومقبول.
+  {
+    files: ["src/components/ui/**/*.tsx", "src/lib/router-compat.tsx", "src/hooks/useAuth.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
   eslintPluginPrettier,
 );

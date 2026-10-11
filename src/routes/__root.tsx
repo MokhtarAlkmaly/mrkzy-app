@@ -5,6 +5,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -16,7 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import NotFound from "@/pages/NotFound";
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -26,9 +27,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          تعذر تحميل الصفحة
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">تعذر تحميل الصفحة</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى أو العودة إلى الصفحة الرئيسية.
         </p>
@@ -62,26 +61,39 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "viewport",
         content: "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes",
       },
-      { title: "نظام المسابقة الرمضانية - مركز إنماء" },
+      { title: "مركز إنماء الأهلي الخيري" },
       {
         name: "description",
-        content:
-          "نظام إدارة المسابقة الرمضانية لحفظ القرآن الكريم - مركز إنماء الأهلي الخيري",
+        content: "نظام إدارة مركز إنماء الأهلي الخيري لتحفيظ القرآن الكريم",
       },
       { name: "author", content: "مختار الكمالي" },
       { name: "keywords", content: "مسابقة رمضانية, حفظ القرآن, مركز إنماء, تحفيظ القرآن" },
       { name: "theme-color", content: "#047857" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "المسابقة الرمضانية" },
+      { name: "apple-mobile-web-app-title", content: "مركز إنماء" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:title", content: "نظام المسابقة الرمضانية - مركز إنماء" },
-      { name: "twitter:title", content: "نظام المسابقة الرمضانية - مركز إنماء" },
-      { property: "og:description", content: "نظام إدارة المسابقة الرمضانية لحفظ القرآن الكريم - مركز إنماء الأهلي الخيري" },
-      { name: "twitter:description", content: "نظام إدارة المسابقة الرمضانية لحفظ القرآن الكريم - مركز إنماء الأهلي الخيري" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/mWFry8G8Buho2HzXpjnpDi65haL2/social-images/social-1786984559832-social-image.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/mWFry8G8Buho2HzXpjnpDi65haL2/social-images/social-1786984559832-social-image.webp" },
+      { property: "og:title", content: "مركز إنماء الأهلي الخيري" },
+      { name: "twitter:title", content: "مركز إنماء الأهلي الخيري" },
+      {
+        property: "og:description",
+        content: "نظام إدارة مركز إنماء الأهلي الخيري لتحفيظ القرآن الكريم",
+      },
+      {
+        name: "twitter:description",
+        content: "نظام إدارة مركز إنماء الأهلي الخيري لتحفيظ القرآن الكريم",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/mWFry8G8Buho2HzXpjnpDi65haL2/social-images/social-1786984559832-social-image.webp",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/mWFry8G8Buho2HzXpjnpDi65haL2/social-images/social-1786984559832-social-image.webp",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

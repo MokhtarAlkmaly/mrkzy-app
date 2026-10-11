@@ -16,13 +16,25 @@ import { Route as MonthlySearchRouteImport } from './routes/monthly-search'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAwardsRouteImport } from './routes/_authenticated/awards'
 import { Route as AuthenticatedCertificatesRouteImport } from './routes/_authenticated/certificates'
+import { Route as AuthenticatedCoursesRouteImport } from './routes/_authenticated/courses'
 import { Route as AuthenticatedDonorsRouteImport } from './routes/_authenticated/donors'
+import { Route as AuthenticatedExamQuestionsRouteImport } from './routes/_authenticated/exam-questions'
 import { Route as AuthenticatedExpensesRouteImport } from './routes/_authenticated/expenses'
+import { Route as AuthenticatedExternalCompetitionRouteImport } from './routes/_authenticated/external-competition'
+import { Route as AuthenticatedInternalCompetitionRouteImport } from './routes/_authenticated/internal-competition'
 import { Route as AuthenticatedKhatimatRouteImport } from './routes/_authenticated/khatimat'
+import { Route as AuthenticatedManagementRouteImport } from './routes/_authenticated/management'
 import { Route as AuthenticatedMediaRouteImport } from './routes/_authenticated/media'
 import { Route as AuthenticatedMonthlyRouteImport } from './routes/_authenticated/monthly'
+import { Route as AuthenticatedQuranRouteImport } from './routes/_authenticated/quran'
+import { Route as AuthenticatedRamadanCompetitionRouteImport } from './routes/_authenticated/ramadan-competition'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated/students'
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
+import { Route as AuthenticatedTraineesRouteImport } from './routes/_authenticated/trainees'
+import { Route as AuthenticatedTrainingRouteImport } from './routes/_authenticated/training'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -59,19 +71,47 @@ const AuthenticatedCertificatesRoute =
     path: '/certificates',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCoursesRoute = AuthenticatedCoursesRouteImport.update({
+  id: '/courses',
+  path: '/courses',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDonorsRoute = AuthenticatedDonorsRouteImport.update({
   id: '/donors',
   path: '/donors',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedExamQuestionsRoute =
+  AuthenticatedExamQuestionsRouteImport.update({
+    id: '/exam-questions',
+    path: '/exam-questions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedExpensesRoute = AuthenticatedExpensesRouteImport.update({
   id: '/expenses',
   path: '/expenses',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedExternalCompetitionRoute =
+  AuthenticatedExternalCompetitionRouteImport.update({
+    id: '/external-competition',
+    path: '/external-competition',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInternalCompetitionRoute =
+  AuthenticatedInternalCompetitionRouteImport.update({
+    id: '/internal-competition',
+    path: '/internal-competition',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKhatimatRoute = AuthenticatedKhatimatRouteImport.update({
   id: '/khatimat',
   path: '/khatimat',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedManagementRoute = AuthenticatedManagementRouteImport.update({
+  id: '/management',
+  path: '/management',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMediaRoute = AuthenticatedMediaRouteImport.update({
@@ -84,14 +124,50 @@ const AuthenticatedMonthlyRoute = AuthenticatedMonthlyRouteImport.update({
   path: '/monthly',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedQuranRoute = AuthenticatedQuranRouteImport.update({
+  id: '/quran',
+  path: '/quran',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRamadanCompetitionRoute =
+  AuthenticatedRamadanCompetitionRouteImport.update({
+    id: '/ramadan-competition',
+    path: '/ramadan-competition',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
   id: '/search',
   path: '/search',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTeachersRoute = AuthenticatedTeachersRouteImport.update({
   id: '/teachers',
   path: '/teachers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTraineesRoute = AuthenticatedTraineesRouteImport.update({
+  id: '/trainees',
+  path: '/trainees',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTrainingRoute = AuthenticatedTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -102,13 +178,25 @@ export interface FileRoutesByFullPath {
   '/monthly-search': typeof MonthlySearchRoute
   '/awards': typeof AuthenticatedAwardsRoute
   '/certificates': typeof AuthenticatedCertificatesRoute
+  '/courses': typeof AuthenticatedCoursesRoute
   '/donors': typeof AuthenticatedDonorsRoute
+  '/exam-questions': typeof AuthenticatedExamQuestionsRoute
   '/expenses': typeof AuthenticatedExpensesRoute
+  '/external-competition': typeof AuthenticatedExternalCompetitionRoute
+  '/internal-competition': typeof AuthenticatedInternalCompetitionRoute
   '/khatimat': typeof AuthenticatedKhatimatRoute
+  '/management': typeof AuthenticatedManagementRoute
   '/media': typeof AuthenticatedMediaRoute
   '/monthly': typeof AuthenticatedMonthlyRoute
+  '/quran': typeof AuthenticatedQuranRoute
+  '/ramadan-competition': typeof AuthenticatedRamadanCompetitionRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/students': typeof AuthenticatedStudentsRoute
   '/teachers': typeof AuthenticatedTeachersRoute
+  '/trainees': typeof AuthenticatedTraineesRoute
+  '/training': typeof AuthenticatedTrainingRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -116,13 +204,25 @@ export interface FileRoutesByTo {
   '/monthly-search': typeof MonthlySearchRoute
   '/awards': typeof AuthenticatedAwardsRoute
   '/certificates': typeof AuthenticatedCertificatesRoute
+  '/courses': typeof AuthenticatedCoursesRoute
   '/donors': typeof AuthenticatedDonorsRoute
+  '/exam-questions': typeof AuthenticatedExamQuestionsRoute
   '/expenses': typeof AuthenticatedExpensesRoute
+  '/external-competition': typeof AuthenticatedExternalCompetitionRoute
+  '/internal-competition': typeof AuthenticatedInternalCompetitionRoute
   '/khatimat': typeof AuthenticatedKhatimatRoute
+  '/management': typeof AuthenticatedManagementRoute
   '/media': typeof AuthenticatedMediaRoute
   '/monthly': typeof AuthenticatedMonthlyRoute
+  '/quran': typeof AuthenticatedQuranRoute
+  '/ramadan-competition': typeof AuthenticatedRamadanCompetitionRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/students': typeof AuthenticatedStudentsRoute
   '/teachers': typeof AuthenticatedTeachersRoute
+  '/trainees': typeof AuthenticatedTraineesRoute
+  '/training': typeof AuthenticatedTrainingRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
@@ -133,13 +233,25 @@ export interface FileRoutesById {
   '/monthly-search': typeof MonthlySearchRoute
   '/_authenticated/awards': typeof AuthenticatedAwardsRoute
   '/_authenticated/certificates': typeof AuthenticatedCertificatesRoute
+  '/_authenticated/courses': typeof AuthenticatedCoursesRoute
   '/_authenticated/donors': typeof AuthenticatedDonorsRoute
+  '/_authenticated/exam-questions': typeof AuthenticatedExamQuestionsRoute
   '/_authenticated/expenses': typeof AuthenticatedExpensesRoute
+  '/_authenticated/external-competition': typeof AuthenticatedExternalCompetitionRoute
+  '/_authenticated/internal-competition': typeof AuthenticatedInternalCompetitionRoute
   '/_authenticated/khatimat': typeof AuthenticatedKhatimatRoute
+  '/_authenticated/management': typeof AuthenticatedManagementRoute
   '/_authenticated/media': typeof AuthenticatedMediaRoute
   '/_authenticated/monthly': typeof AuthenticatedMonthlyRoute
+  '/_authenticated/quran': typeof AuthenticatedQuranRoute
+  '/_authenticated/ramadan-competition': typeof AuthenticatedRamadanCompetitionRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/students': typeof AuthenticatedStudentsRoute
   '/_authenticated/teachers': typeof AuthenticatedTeachersRoute
+  '/_authenticated/trainees': typeof AuthenticatedTraineesRoute
+  '/_authenticated/training': typeof AuthenticatedTrainingRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
@@ -151,13 +263,25 @@ export interface FileRouteTypes {
     | '/monthly-search'
     | '/awards'
     | '/certificates'
+    | '/courses'
     | '/donors'
+    | '/exam-questions'
     | '/expenses'
+    | '/external-competition'
+    | '/internal-competition'
     | '/khatimat'
+    | '/management'
     | '/media'
     | '/monthly'
+    | '/quran'
+    | '/ramadan-competition'
+    | '/reports'
     | '/search'
+    | '/settings'
+    | '/students'
     | '/teachers'
+    | '/trainees'
+    | '/training'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -165,13 +289,25 @@ export interface FileRouteTypes {
     | '/monthly-search'
     | '/awards'
     | '/certificates'
+    | '/courses'
     | '/donors'
+    | '/exam-questions'
     | '/expenses'
+    | '/external-competition'
+    | '/internal-competition'
     | '/khatimat'
+    | '/management'
     | '/media'
     | '/monthly'
+    | '/quran'
+    | '/ramadan-competition'
+    | '/reports'
     | '/search'
+    | '/settings'
+    | '/students'
     | '/teachers'
+    | '/trainees'
+    | '/training'
     | '/'
   id:
     | '__root__'
@@ -181,13 +317,25 @@ export interface FileRouteTypes {
     | '/monthly-search'
     | '/_authenticated/awards'
     | '/_authenticated/certificates'
+    | '/_authenticated/courses'
     | '/_authenticated/donors'
+    | '/_authenticated/exam-questions'
     | '/_authenticated/expenses'
+    | '/_authenticated/external-competition'
+    | '/_authenticated/internal-competition'
     | '/_authenticated/khatimat'
+    | '/_authenticated/management'
     | '/_authenticated/media'
     | '/_authenticated/monthly'
+    | '/_authenticated/quran'
+    | '/_authenticated/ramadan-competition'
+    | '/_authenticated/reports'
     | '/_authenticated/search'
+    | '/_authenticated/settings'
+    | '/_authenticated/students'
     | '/_authenticated/teachers'
+    | '/_authenticated/trainees'
+    | '/_authenticated/training'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
@@ -249,11 +397,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCertificatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/courses': {
+      id: '/_authenticated/courses'
+      path: '/courses'
+      fullPath: '/courses'
+      preLoaderRoute: typeof AuthenticatedCoursesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/donors': {
       id: '/_authenticated/donors'
       path: '/donors'
       fullPath: '/donors'
       preLoaderRoute: typeof AuthenticatedDonorsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/exam-questions': {
+      id: '/_authenticated/exam-questions'
+      path: '/exam-questions'
+      fullPath: '/exam-questions'
+      preLoaderRoute: typeof AuthenticatedExamQuestionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/expenses': {
@@ -263,11 +425,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedExpensesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/external-competition': {
+      id: '/_authenticated/external-competition'
+      path: '/external-competition'
+      fullPath: '/external-competition'
+      preLoaderRoute: typeof AuthenticatedExternalCompetitionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/internal-competition': {
+      id: '/_authenticated/internal-competition'
+      path: '/internal-competition'
+      fullPath: '/internal-competition'
+      preLoaderRoute: typeof AuthenticatedInternalCompetitionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/khatimat': {
       id: '/_authenticated/khatimat'
       path: '/khatimat'
       fullPath: '/khatimat'
       preLoaderRoute: typeof AuthenticatedKhatimatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/management': {
+      id: '/_authenticated/management'
+      path: '/management'
+      fullPath: '/management'
+      preLoaderRoute: typeof AuthenticatedManagementRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/media': {
@@ -284,11 +467,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMonthlyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/quran': {
+      id: '/_authenticated/quran'
+      path: '/quran'
+      fullPath: '/quran'
+      preLoaderRoute: typeof AuthenticatedQuranRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ramadan-competition': {
+      id: '/_authenticated/ramadan-competition'
+      path: '/ramadan-competition'
+      fullPath: '/ramadan-competition'
+      preLoaderRoute: typeof AuthenticatedRamadanCompetitionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/search': {
       id: '/_authenticated/search'
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof AuthenticatedSearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/students': {
+      id: '/_authenticated/students'
+      path: '/students'
+      fullPath: '/students'
+      preLoaderRoute: typeof AuthenticatedStudentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/teachers': {
@@ -298,32 +516,70 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeachersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/trainees': {
+      id: '/_authenticated/trainees'
+      path: '/trainees'
+      fullPath: '/trainees'
+      preLoaderRoute: typeof AuthenticatedTraineesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/training': {
+      id: '/_authenticated/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof AuthenticatedTrainingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAwardsRoute: typeof AuthenticatedAwardsRoute
   AuthenticatedCertificatesRoute: typeof AuthenticatedCertificatesRoute
+  AuthenticatedCoursesRoute: typeof AuthenticatedCoursesRoute
   AuthenticatedDonorsRoute: typeof AuthenticatedDonorsRoute
+  AuthenticatedExamQuestionsRoute: typeof AuthenticatedExamQuestionsRoute
   AuthenticatedExpensesRoute: typeof AuthenticatedExpensesRoute
+  AuthenticatedExternalCompetitionRoute: typeof AuthenticatedExternalCompetitionRoute
+  AuthenticatedInternalCompetitionRoute: typeof AuthenticatedInternalCompetitionRoute
   AuthenticatedKhatimatRoute: typeof AuthenticatedKhatimatRoute
+  AuthenticatedManagementRoute: typeof AuthenticatedManagementRoute
   AuthenticatedMediaRoute: typeof AuthenticatedMediaRoute
   AuthenticatedMonthlyRoute: typeof AuthenticatedMonthlyRoute
+  AuthenticatedQuranRoute: typeof AuthenticatedQuranRoute
+  AuthenticatedRamadanCompetitionRoute: typeof AuthenticatedRamadanCompetitionRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRoute
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRoute
+  AuthenticatedTraineesRoute: typeof AuthenticatedTraineesRoute
+  AuthenticatedTrainingRoute: typeof AuthenticatedTrainingRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAwardsRoute: AuthenticatedAwardsRoute,
   AuthenticatedCertificatesRoute: AuthenticatedCertificatesRoute,
+  AuthenticatedCoursesRoute: AuthenticatedCoursesRoute,
   AuthenticatedDonorsRoute: AuthenticatedDonorsRoute,
+  AuthenticatedExamQuestionsRoute: AuthenticatedExamQuestionsRoute,
   AuthenticatedExpensesRoute: AuthenticatedExpensesRoute,
+  AuthenticatedExternalCompetitionRoute: AuthenticatedExternalCompetitionRoute,
+  AuthenticatedInternalCompetitionRoute: AuthenticatedInternalCompetitionRoute,
   AuthenticatedKhatimatRoute: AuthenticatedKhatimatRoute,
+  AuthenticatedManagementRoute: AuthenticatedManagementRoute,
   AuthenticatedMediaRoute: AuthenticatedMediaRoute,
   AuthenticatedMonthlyRoute: AuthenticatedMonthlyRoute,
+  AuthenticatedQuranRoute: AuthenticatedQuranRoute,
+  AuthenticatedRamadanCompetitionRoute: AuthenticatedRamadanCompetitionRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStudentsRoute: AuthenticatedStudentsRoute,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRoute,
+  AuthenticatedTraineesRoute: AuthenticatedTraineesRoute,
+  AuthenticatedTrainingRoute: AuthenticatedTrainingRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 

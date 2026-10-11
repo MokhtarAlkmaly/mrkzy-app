@@ -1,3 +1,13 @@
+# مركز إنماء الأهلي الخيري
+
+نظام متكامل لإدارة مركز تحفيظ القرآن الكريم (بنين وبنات): سجل الطلاب والطالبات عبر
+كل الأعوام، المعلمون والمعلمات، المتابعة الشهرية، المسابقات، الختمات، الشهادات
+والتكريم، والمصاريف والممولون، بالإضافة إلى قسم التدريب والتأهيل.
+
+> This project was built with [Lovable](https://lovable.dev).
+
+---
+
 # Welcome to your Lovable project
 
 This project was built with [Lovable](https://lovable.dev).

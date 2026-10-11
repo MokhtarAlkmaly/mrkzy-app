@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@/lib/router-compat";
@@ -39,7 +45,9 @@ const Settings = () => {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const save = async () => {
     if (!user) return;
@@ -53,7 +61,7 @@ const Settings = () => {
         supervisor_signature: supervisorSignature.trim(),
         manager_signature: managerSignature.trim(),
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     );
     setSaving(false);
     if (error) {
@@ -64,13 +72,16 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]" dir="rtl">
+    <div
+      className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
+      dir="rtl"
+    >
       <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
         <div className="container mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-4">
             <Link to="/students">
               <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
-                <ArrowRight className="h-4 w-4" /> رجوع لصفحة الطالبات
+                <ArrowRight className="h-4 w-4" /> رجوع لصفحة الطلاب والطالبات
               </Button>
             </Link>
             <img src={logo} alt="الشعار" className="h-16 w-auto" />
@@ -92,34 +103,55 @@ const Settings = () => {
             <div>
               <label className="text-sm font-medium">سنة المسابقة النشطة</label>
               <Select value={activeYear} onValueChange={setActiveYearState}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i).map((y) => (
-                    <SelectItem key={y} value={String(y)}>{y}هـ</SelectItem>
-                  ))}
+                  {Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i).map(
+                    (y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        {y}هـ
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <label className="text-sm font-medium">اسم المركز/الجهة (يظهر في الشهادات والتقارير)</label>
-              <Input value={centerName} onChange={(e) => setCenterName(e.target.value)} placeholder="مركز تحفيظ القرآن الكريم" />
+              <label className="text-sm font-medium">
+                اسم المركز/الجهة (يظهر في الشهادات والتقارير)
+              </label>
+              <Input
+                value={centerName}
+                onChange={(e) => setCenterName(e.target.value)}
+                placeholder="مركز إنماء الأهلي الخيري"
+              />
             </div>
 
             <div className="border-t border-border pt-4">
               <p className="text-sm font-semibold mb-3">التوقيعات الافتراضية عند الطباعة</p>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm font-medium">اسم المعلمة</label>
-                  <Input value={teacherSignature} onChange={(e) => setTeacherSignature(e.target.value)} />
+                  <label className="text-sm font-medium">اسم المعلم/المعلمة</label>
+                  <Input
+                    value={teacherSignature}
+                    onChange={(e) => setTeacherSignature(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium">اسم المشرفة</label>
-                  <Input value={supervisorSignature} onChange={(e) => setSupervisorSignature(e.target.value)} />
+                  <Input
+                    value={supervisorSignature}
+                    onChange={(e) => setSupervisorSignature(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium">اسم المديرة</label>
-                  <Input value={managerSignature} onChange={(e) => setManagerSignature(e.target.value)} />
+                  <Input
+                    value={managerSignature}
+                    onChange={(e) => setManagerSignature(e.target.value)}
+                  />
                 </div>
               </div>
             </div>

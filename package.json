@@ -10,6 +10,7 @@
     "check-env": "node scripts/check-env.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "postinstall": "node scripts/copy-sqlite-wasm.mjs",
     "cap:sync": "cap sync android",

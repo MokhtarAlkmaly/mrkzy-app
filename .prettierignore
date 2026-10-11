@@ -6,3 +6,6 @@ pnpm-lock.yaml
 package-lock.json
 bun.lock
 routeTree.gen.ts
+
+# ملف بيانات نص المصحف المولَّد آليًا (سطر واحد طويل — لا تُنسّقه prettier)
+public/quran/

@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "postinstall": "node scripts/copy-sqlite-wasm.mjs",
     "cap:sync": "cap sync android",
-    "cap:android": "cap open android"
+    "cap:android": "cap open android",
+    "quran:extract": "node scripts/extract-quran-text.mjs"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.0",

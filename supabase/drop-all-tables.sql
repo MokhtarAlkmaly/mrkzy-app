@@ -57,6 +57,7 @@ END $$;
 -- دوال نظام المستخدمين والصلاحيات
 DROP FUNCTION IF EXISTS public.admin_list_users() CASCADE;
 DROP FUNCTION IF EXISTS public.admin_set_role(uuid, boolean) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_delete_user(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.can_read_user_data(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.is_admin() CASCADE;
 DROP FUNCTION IF EXISTS public.is_admin_email(text) CASCADE;

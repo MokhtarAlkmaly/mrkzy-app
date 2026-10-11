@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated;
 GRANT ALL ON public.profiles TO service_role;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -200,6 +200,11 @@ CREATE POLICY "Users can update their own profile"
 ON public.profiles FOR UPDATE TO authenticated
 USING (id = auth.uid() OR public.has_role(auth.uid(), 'admin'::public.app_role))
 WITH CHECK (id = auth.uid() OR public.has_role(auth.uid(), 'admin'::public.app_role));
+
+DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
+CREATE POLICY "Admins can delete profiles"
+ON public.profiles FOR DELETE TO authenticated
+USING (public.has_role(auth.uid(), 'admin'::public.app_role) AND id <> auth.uid());
 
 -- user_roles: المستخدم يرى دوره فقط، والمسؤول يرى ويدير الجميع
 DROP POLICY IF EXISTS "Users can view their own roles" ON public.user_roles;
@@ -443,6 +448,62 @@ $$;
 
 REVOKE ALL ON FUNCTION public.admin_set_role(uuid, boolean) FROM public;
 GRANT EXECUTE ON FUNCTION public.admin_set_role(uuid, boolean) TO authenticated;
+
+-- حذف مستخدم وكل بياناته وصلاحياته (للمسؤول فقط، ولا يستطيع حذف نفسه)
+CREATE OR REPLACE FUNCTION public.admin_delete_user(_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  t text;
+  user_tables text[] := ARRAY[
+    'monthly_submissions', 'teacher_portals',
+    'training_enrollments', 'trainees', 'training_courses',
+    'monthly_tracking', 'year_data', 'hifz_history', 'students',
+    'teacher_bonuses', 'teachers',
+    'awards', 'certificates', 'ceremony_expenses', 'donors',
+    'student_competitions', 'exam_questions',
+    'media', 'user_settings'
+  ];
+BEGIN
+  IF NOT public.has_role(auth.uid(), 'admin'::public.app_role) THEN
+    RAISE EXCEPTION 'غير مصرح: حذف المستخدمين للمسؤول فقط';
+  END IF;
+
+  IF _user_id IS NULL THEN
+    RAISE EXCEPTION 'معرّف المستخدم مطلوب';
+  END IF;
+
+  IF _user_id = auth.uid() THEN
+    RAISE EXCEPTION 'لا يمكنك حذف حسابك أنت';
+  END IF;
+
+  FOREACH t IN ARRAY user_tables LOOP
+    IF to_regclass('public.' || quote_ident(t)) IS NOT NULL
+       AND EXISTS (
+         SELECT 1 FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = t AND column_name = 'user_id'
+       ) THEN
+      EXECUTE format('DELETE FROM public.%I WHERE user_id = $1', t) USING _user_id;
+    END IF;
+  END LOOP;
+
+  DELETE FROM public.data_access_grants WHERE owner_id = _user_id OR grantee_id = _user_id;
+  DELETE FROM public.user_roles WHERE user_id = _user_id;
+  DELETE FROM public.profiles WHERE id = _user_id;
+
+  BEGIN
+    DELETE FROM auth.users WHERE id = _user_id;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_delete_user(uuid) FROM public;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(uuid) TO authenticated;
 
 GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;

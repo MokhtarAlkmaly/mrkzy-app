@@ -392,7 +392,8 @@ const Index = () => {
     name: string;
     years: string[];
   } | null>(null);
-  const [deleteMode, setDeleteMode] = useState<"all" | "year" | "selected">("year");
+  const [deleteMode, setDeleteMode] = useState<"all" | "year" | "duplicates" | "selected">("year");
+  const [selectedYearToDelete, setSelectedYearToDelete] = useState<string>("1447");
   const [selectedToDelete, setSelectedToDelete] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
 
@@ -409,23 +410,37 @@ const Index = () => {
     setDeleting(true);
     try {
       if (deleteMode === "all") {
-        const { deleteAllStudents } = await import("@/utils/storage");
-        await deleteAllStudents();
+        const { deleteAllData } = await import("@/utils/storage");
+        await deleteAllData();
         setStudents([]);
         setDirtyMap({});
         toast({
-          title: "تم الحذف",
+          title: "تم حذف كل البيانات",
           description: "تم حذف جميع البيانات (كل الأعوام والطلاب والطالبات)",
           variant: "destructive",
         });
       } else if (deleteMode === "year") {
         const { deleteYearData } = await import("@/utils/storage");
-        await deleteYearData(dataYearKey);
+        const targetYearKey =
+          selectedYearToDelete === currentYear ? dataYearKey : selectedYearToDelete;
+        await deleteYearData(targetYearKey);
         setDirtyMap({});
         toast({
-          title: "تم الحذف",
-          description: `تم حذف بيانات ${competitionLabel} لعام ${currentYear}هـ فقط (الطلاب والطالبات نفسهم باقون)`,
+          title: "تم حذف بيانات العام",
+          description: `تم حذف بيانات عام ${selectedYearToDelete}هـ فقط (الطلاب والطالبات أنفسهم باقون)`,
           variant: "destructive",
+        });
+        await loadData();
+      } else if (deleteMode === "duplicates") {
+        const { deleteDuplicateStudents } = await import("@/utils/storage");
+        const removed = await deleteDuplicateStudents();
+        setDirtyMap({});
+        toast({
+          title: removed > 0 ? "تم حذف الأسماء المكررة" : "لا توجد أسماء مكررة",
+          description:
+            removed > 0
+              ? `تم دمج وحذف ${removed} سجل مكرر بنجاح`
+              : "جميع أسماء الطلاب والطالبات غير مكررة",
         });
         await loadData();
       } else {
@@ -797,6 +812,7 @@ const Index = () => {
               <Button
                 onClick={() => {
                   setDeleteMode("year");
+                  setSelectedYearToDelete(currentYear);
                   setSelectedToDelete(new Set());
                   setDeleteDialogOpen(true);
                 }}
@@ -867,14 +883,44 @@ const Index = () => {
             className="space-y-3"
           >
             <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-border p-3 hover:bg-secondary/50">
-              <RadioGroupItem value="year" id="mode-year" className="mt-1" />
+              <RadioGroupItem value="duplicates" id="mode-duplicates" className="mt-1" />
               <div>
-                <div className="font-bold">
-                  حذف بيانات {competitionLabel} لعام {currentYear}هـ فقط
-                </div>
+                <div className="font-bold">حذف مكرر أسماء الطلاب</div>
                 <div className="text-xs text-muted-foreground">
-                  تُحذف الدرجات والحفظ لهذا العام فقط، وتبقى الطلاب والطالبات وباقي الأعوام كما هي
+                  يدمج ويحذف السجلات المكررة بنفس الاسم مع الاحتفاظ ببيانات ودرجات الطالب/ة
                 </div>
+              </div>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-border p-3 hover:bg-secondary/50">
+              <RadioGroupItem value="year" id="mode-year" className="mt-1" />
+              <div className="w-full space-y-2">
+                <div>
+                  <div className="font-bold">حذف بيانات عام ({selectedYearToDelete}هـ)</div>
+                  <div className="text-xs text-muted-foreground">
+                    تُحذف الدرجات والحفظ للعام المحدد فقط، وتبقى الطلاب والطالبات وباقي الأعوام كما
+                    هي
+                  </div>
+                </div>
+                {deleteMode === "year" && (
+                  <div className="pt-1">
+                    <Select value={selectedYearToDelete} onValueChange={setSelectedYearToDelete}>
+                      <SelectTrigger className="h-9 w-36 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(
+                          { length: END_YEAR - START_YEAR + 1 },
+                          (_, i) => START_YEAR + i,
+                        ).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}هـ
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </label>
 

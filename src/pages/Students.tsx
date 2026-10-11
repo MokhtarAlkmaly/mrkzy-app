@@ -64,6 +64,9 @@ import {
   getActiveYear,
   saveStudent,
   deleteStudent,
+  deleteDuplicateStudents,
+  deleteYearData,
+  deleteAllData,
   registerStudentInYear,
   loadCustomColumns,
   loadStudentStatuses,
@@ -74,8 +77,10 @@ import { setPendingStudentLink } from "@/utils/studentLink";
 import {
   getDuplicateNameCounts,
   getDuplicateCountFor,
+  getExtraDuplicateRecordsCount,
   normalizeStudentName,
 } from "@/utils/studentNames";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ALL_GRADES_VALUE,
   DEFAULT_SCHOOL_GRADES,
@@ -171,6 +176,14 @@ const Students = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm());
   const [registerYear, setRegisterYear] = useState("");
+  const [dedupDialogOpen, setDedupDialogOpen] = useState(false);
+  const [deduping, setDeduping] = useState(false);
+  const [deleteYearDialogOpen, setDeleteYearDialogOpen] = useState(false);
+  const [yearToDelete, setYearToDelete] = useState("");
+  const [deleteOrphanStudents, setDeleteOrphanStudents] = useState(false);
+  const [deletingYear, setDeletingYear] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -194,7 +207,11 @@ const Students = () => {
 
   useEffect(() => {
     void load();
-    void (async () => setRegisterYear(await getActiveYear()))();
+    void (async () => {
+      const y = await getActiveYear();
+      setRegisterYear(y);
+      setYearToDelete(y);
+    })();
   }, [load]);
 
   /** عدد مرات تكرار كل اسم (بعد التطبيع العربي) — لكشف الإدخال المزدوج. */
@@ -203,6 +220,7 @@ const Students = () => {
     () => Array.from(duplicateCounts.values()).reduce((sum, n) => sum + n, 0),
     [duplicateCounts],
   );
+  const extraDuplicatesCount = useMemo(() => getExtraDuplicateRecordsCount(students), [students]);
 
   /** خيارات السنوات الدراسية مبنية من البيانات الفعلية + القائمة المعتمدة. */
   const gradeOptions = useMemo(
@@ -285,6 +303,73 @@ const Students = () => {
     await load();
   };
 
+  const handleDeleteDuplicates = async () => {
+    if (readOnly) return;
+    setDeduping(true);
+    try {
+      const removed = await deleteDuplicateStudents();
+      setDedupDialogOpen(false);
+      await load();
+      toast({
+        title: removed > 0 ? "تم حذف الأسماء المكررة" : "لا توجد أسماء مكررة",
+        description:
+          removed > 0
+            ? `تم دمج وحذف ${removed} سجل مكرر مع الاحتفاظ ببيانات ودرجات الطالب/ة.`
+            : "جميع أسماء الطلاب والطالبات في السجل غير مكررة.",
+      });
+    } catch (error) {
+      console.error("Deduplicate failed:", error);
+      toast({ title: "تعذّر حذف الأسماء المكررة", variant: "destructive" });
+    } finally {
+      setDeduping(false);
+    }
+  };
+
+  const handleConfirmDeleteYear = async () => {
+    if (readOnly || !yearToDelete) return;
+    setDeletingYear(true);
+    try {
+      await deleteYearData(yearToDelete, {
+        includeAllYearTables: true,
+        deleteOrphanStudents,
+      });
+      setDeleteYearDialogOpen(false);
+      await load();
+      toast({
+        title: `تم حذف بيانات عام ${yearToDelete}هـ`,
+        description: deleteOrphanStudents
+          ? `تم حذف جميع بيانات عام ${yearToDelete}هـ مع الطلاب المسجلين في هذا العام فقط.`
+          : `تم حذف بيانات عام ${yearToDelete}هـ مع بقاء أسماء الطلاب في السجل العام.`,
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error("Delete year failed:", error);
+      toast({ title: "تعذّر حذف بيانات العام", variant: "destructive" });
+    } finally {
+      setDeletingYear(false);
+    }
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    if (readOnly) return;
+    setDeletingAll(true);
+    try {
+      await deleteAllData();
+      setDeleteAllDialogOpen(false);
+      await load();
+      toast({
+        title: "تم حذف كل البيانات",
+        description: "تم مسح جميع الطلاب والطالبات وبيانات كافة الأعوام نهائياً.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      console.error("Delete all failed:", error);
+      toast({ title: "تعذّر حذف كل البيانات", variant: "destructive" });
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
   /** تصدير السجل المعروض حالياً إلى Excel (مع كل حقول الملف التفصيلية). */
   const exportExcel = async () => {
     if (filtered.length === 0) {
@@ -363,13 +448,24 @@ const Students = () => {
         )}
 
         {duplicatesTotal > 0 && (
-          <div className="flex items-start gap-2 rounded-2xl border border-amber-300/70 bg-amber-50/70 p-3 text-sm text-amber-900">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              يوجد <strong>{duplicatesTotal}</strong> سجل بأسماء مكررة (بعد تجاهل التشكيل واختلاف
-              الألف والياء والتاء المربوطة). راجعها من شارة «مكرر» بجانب الاسم — قد تكون إدخالاً
-              مزدوجاً للطالب/ة نفسه.
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-300/70 bg-amber-50/70 p-3 text-sm text-amber-900">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                يوجد <strong>{duplicatesTotal}</strong> سجل بأسماء مكررة ({extraDuplicatesCount} سجل
+                زائد بعد تجاهل التشكيل واختلاف الألف والياء والتاء المربوطة). راجعها من شارة «مكرر»
+                بجانب الاسم — قد تكون إدخالاً مزدوجاً للطالب/ة نفسه.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={readOnly || deduping}
+              onClick={() => setDedupDialogOpen(true)}
+              className="gap-1 border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> حذف مكرر أسماء الطلاب ({extraDuplicatesCount})
+            </Button>
           </div>
         )}
 
@@ -448,6 +544,36 @@ const Students = () => {
             disabled={exporting}
           >
             <Download className="h-4 w-4" /> {exporting ? "جارٍ التصدير..." : "تصدير Excel"}
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1"
+            onClick={() => setDedupDialogOpen(true)}
+            disabled={readOnly || deduping}
+          >
+            <Trash2 className="h-4 w-4 text-amber-600" />
+            حذف مكرر أسماء الطلاب
+            {extraDuplicatesCount > 0 && (
+              <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-bold text-amber-700">
+                {extraDuplicatesCount}
+              </span>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setDeleteYearDialogOpen(true)}
+            disabled={readOnly}
+          >
+            <Trash2 className="h-4 w-4" /> حذف بيانات عام
+          </Button>
+          <Button
+            variant="destructive"
+            className="gap-1"
+            onClick={() => setDeleteAllDialogOpen(true)}
+            disabled={readOnly}
+          >
+            <Trash2 className="h-4 w-4" /> حذف كل البيانات
           </Button>
           <Button className="gap-1" onClick={openAdd} disabled={readOnly}>
             <Plus className="h-4 w-4" /> إضافة طالب/طالبة
@@ -866,6 +992,127 @@ const Students = () => {
             </Button>
             <Button onClick={() => void save()} disabled={saving} className="gap-1">
               <Save className="h-4 w-4" /> {saving ? "جارٍ الحفظ..." : "حفظ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* تأكيد حذف مكرر أسماء الطلاب */}
+      <Dialog open={dedupDialogOpen} onOpenChange={setDedupDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-amber-600" /> حذف مكرر أسماء الطلاب
+            </DialogTitle>
+            <DialogDescription>
+              {extraDuplicatesCount > 0
+                ? `سيتم دمج وحذف ${extraDuplicatesCount} سجل مكرر (من أصل ${duplicatesTotal} سجل متشابه بالاسم) مع الاحتفاظ بسجل أصلي واحد لكل طالب/ة ونقل أي درجات أو بيانات أعوام إليه حتى لا تضيع.`
+                : "لا توجد حالياً أسماء مكررة في السجل، ولكن يمكنك تشغيل الفحص للتأكد."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDedupDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              onClick={() => void handleDeleteDuplicates()}
+              disabled={deduping}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deduping ? "جارٍ حذف المكرر..." : "تأكيد حذف المكرر"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* تأكيد حذف بيانات عام */}
+      <Dialog open={deleteYearDialogOpen} onOpenChange={setDeleteYearDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" /> حذف بيانات عام
+            </DialogTitle>
+            <DialogDescription>
+              اختر العام المراد حذف بياناته (الدرجات، الحفظ، المتابعة الشهرية، الحلقات، المعلمين،
+              الجوائز، الشهادات، المصروفات، والمسابقات الخاصة بذلك العام).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold">اختر العام الهجري</label>
+              <Select value={yearToDelete} onValueChange={setYearToDelete}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر العام" />
+                </SelectTrigger>
+                <SelectContent>
+                  {YEARS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}هـ
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm hover:bg-secondary/40">
+              <Checkbox
+                checked={deleteOrphanStudents}
+                onCheckedChange={(v) => setDeleteOrphanStudents(v === true)}
+                className="mt-0.5"
+              />
+              <div>
+                <div className="font-semibold">
+                  حذف الطلاب المسجلين في عام {yearToDelete}هـ فقط من السجل العام أيضاً
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  إذا لم تحدد هذا الخيار، تُحذف درجات وبيانات عام {yearToDelete}هـ فقط وتبقى أسماء
+                  الطلاب في السجل العام.
+                </div>
+              </div>
+            </label>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteYearDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleConfirmDeleteYear()}
+              disabled={deletingYear || !yearToDelete}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletingYear ? "جارٍ الحذف..." : `حذف بيانات عام ${yearToDelete}هـ`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* تأكيد حذف كل البيانات */}
+      <Dialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" /> حذف كل البيانات نهائياً
+            </DialogTitle>
+            <DialogDescription>
+              سيتم حذف جميع الطلاب والطالبات وبيانات كافة الأعوام والمتابعات الشهرية والمعلمين
+              والحلقات والجوائز والشهادات والمصروفات نهائياً من السحابة وهذا الجهاز. هذا الإجراء لا
+              يمكن التراجع عنه.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteAllDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleConfirmDeleteAll()}
+              disabled={deletingAll}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletingAll ? "جارٍ الحذف..." : "تأكيد حذف كل البيانات"}
             </Button>
           </DialogFooter>
         </DialogContent>

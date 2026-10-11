@@ -250,18 +250,18 @@ export const ImportExport = ({ onDataImported, currentYear, displayYear }: Props
   };
 
   const handleMergeDuplicates = async () => {
-    if (!confirm("سيتم دمج الطلاب والطالبات المكررين بنفس الاسم في سجل واحد. هل تريد المتابعة؟"))
+    if (
+      !confirm("سيتم دمج وحذف الطلاب والطالبات المكررين بنفس الاسم في سجل واحد. هل تريد المتابعة؟")
+    )
       return;
     setMerging(true);
     try {
       const merged = await mergeDuplicateStudents();
       onDataImported();
       toast({
-        title: merged > 0 ? "تم الدمج" : "لا توجد مكررات",
+        title: merged > 0 ? "تم حذف الأسماء المكررة" : "لا توجد مكررات",
         description:
-          merged > 0
-            ? `تم دمج ${merged} سجل مكرر. لا تنسَ الضغط على حفظ.`
-            : "لم يتم العثور على أسماء مكررة",
+          merged > 0 ? `تم دمج وحذف ${merged} سجل مكرر بنجاح.` : "لم يتم العثور على أسماء مكررة",
       });
     } finally {
       setMerging(false);
@@ -338,7 +338,7 @@ export const ImportExport = ({ onDataImported, currentYear, displayYear }: Props
             disabled={merging}
           >
             <Users className="h-3 w-3" />
-            {merging ? "جارٍ الدمج..." : "دمج الأسماء المكررة"}
+            {merging ? "جارٍ حذف المكرر..." : "حذف مكرر أسماء الطلاب"}
           </Button>
           <p className="text-xs text-muted-foreground">
             📝 نزّل القالب، عبّئ البيانات (الاسم إلزامي)، ثم استورده.

@@ -65,6 +65,7 @@ import {
   CachedMedia,
 } from "./localDB";
 import { markDirty, getPendingChanges, clearPending, remapPendingStudentId } from "./localDB";
+import { normalizeStudentName } from "./studentNames";
 import { getViewAsId, isViewingOtherUser, subscribeViewAs } from "./viewAs";
 
 // أشكال السجلات التي تُرَفَع للسحابة (نسخ من بيانات الكاش المحلية)
@@ -704,55 +705,132 @@ export const saveStudent = async (
 export const deleteStudent = async (id: number) => {
   guardWrite();
   await deleteCachedStudent(id);
+  await clearPending(`student:${id}`);
   await markDirty("student", "delete", { id });
   // Also delete related cache
   const allHistory = await getCachedHifzHistory();
   const allYearData = await getCachedYearData();
+  const { deleteItem } = await import("./localDB");
   for (const row of allHistory.filter((r) => r.student_id === id)) {
-    const { deleteItem } = await import("./localDB");
     await deleteItem("hifz_history", [row.student_id, row.year_key]);
+    await clearPending(`hifz:${row.student_id}|${row.year_key}`);
   }
   for (const row of allYearData.filter((r) => r.student_id === id)) {
-    const { deleteItem } = await import("./localDB");
     await deleteItem("year_data", [row.student_id, row.year]);
+    await clearPending(`year:${row.student_id}|${row.year}`);
   }
+  queueCloudSync();
 };
 
-export const deleteAllStudents = async () => {
+/**
+ * يحذف كل بيانات الحساب الحالي من السحابة والكاش المحلي (الطلاب، الأعوام،
+ * المتابعة الشهرية، الحلقات، المعلمين، الجوائز، الشهادات، الداعمين، المصروفات،
+ * المسابقات، أسئلة الاختبارات، المتدربين، الدورات، والوسائط).
+ */
+export const deleteAllData = async () => {
   guardWrite();
-  const { clearStore } = await import("./localDB");
+  const { clearStore, clearAllPending } = await import("./localDB");
 
-  // Try to wipe cloud first if online & authenticated
   const userId = await getUserId();
   if (canUseCloud(userId)) {
     try {
+      // حذف ملفات الوسائط من التخزين السحابي إن وُجدت
+      const cachedMedia = await getCachedMedia();
+      const { data: cloudMedia } = await supabase
+        .from("media")
+        .select("file_path")
+        .eq("user_id", userId);
+      const paths = Array.from(
+        new Set(
+          [
+            ...cachedMedia.map((m) => m.file_path),
+            ...(cloudMedia || []).map((m) => m.file_path),
+          ].filter(Boolean),
+        ),
+      );
+      if (paths.length > 0) {
+        await supabase.storage.from("media").remove(paths);
+      }
+
+      // حذف الجداول التابعة أولاً ثم الأساسية
       await Promise.all([
+        supabase.from("monthly_submissions").delete().eq("user_id", userId),
+        supabase.from("monthly_tracking").delete().eq("user_id", userId),
         supabase.from("hifz_history").delete().eq("user_id", userId),
         supabase.from("year_data").delete().eq("user_id", userId),
+        supabase.from("training_enrollments").delete().eq("user_id", userId),
       ]);
-      await supabase.from("students").delete().eq("user_id", userId);
+
+      await Promise.all([
+        supabase.from("teacher_portals").delete().eq("user_id", userId),
+        supabase.from("students").delete().eq("user_id", userId),
+        supabase.from("trainees").delete().eq("user_id", userId),
+        supabase.from("training_courses").delete().eq("user_id", userId),
+        supabase.from("teacher_bonuses").delete().eq("user_id", userId),
+        supabase.from("teachers").delete().eq("user_id", userId),
+        supabase.from("awards").delete().eq("user_id", userId),
+        supabase.from("certificates").delete().eq("user_id", userId),
+        supabase.from("ceremony_expenses").delete().eq("user_id", userId),
+        supabase.from("donors").delete().eq("user_id", userId),
+        supabase.from("student_competitions").delete().eq("user_id", userId),
+        supabase.from("exam_questions").delete().eq("user_id", userId),
+        supabase.from("media").delete().eq("user_id", userId),
+      ]);
     } catch (err) {
       console.error("Cloud wipe failed:", err);
     }
   } else {
-    // Offline: queue student deletes so next sync removes them
-    const existing = await getCachedStudents();
-    for (const s of existing) {
-      await markDirty("student", "delete", { id: s.id });
+    // Offline: queue deletes so next sync removes them
+    const [
+      existingStudents,
+      existingTeachers,
+      existingBonuses,
+      existingDonors,
+      existingAwards,
+      existingExpenses,
+      existingCerts,
+      existingMedia,
+    ] = await Promise.all([
+      getCachedStudents(),
+      getCachedTeachers(),
+      getCachedTeacherBonuses(),
+      getCachedDonors(),
+      getCachedAwards(),
+      getCachedCeremonyExpenses(),
+      getCachedCertificates(),
+      getCachedMedia(),
+    ]);
+    for (const s of existingStudents) await markDirty("student", "delete", { id: s.id });
+    for (const t of existingTeachers) await markDirty("teacher", "delete", { id: t.id });
+    for (const b of existingBonuses) await markDirty("teacher_bonus", "delete", { id: b.id });
+    for (const d of existingDonors) await markDirty("donor", "delete", { id: d.id });
+    for (const a of existingAwards) await markDirty("award", "delete", { id: a.id });
+    for (const e of existingExpenses) await markDirty("expense", "delete", { id: e.id });
+    for (const c of existingCerts) await markDirty("certificate", "delete", { id: c.id });
+    for (const m of existingMedia) {
+      await markDirty("media", "delete", { id: m.id, file_path: m.file_path });
     }
   }
 
-  await clearStore("students");
-  await clearStore("hifz_history");
-  await clearStore("year_data");
-  // If we wiped cloud successfully, drop any stale pending changes
+  await Promise.all([
+    clearStore("students"),
+    clearStore("hifz_history"),
+    clearStore("year_data"),
+    clearStore("teachers"),
+    clearStore("teacher_bonuses"),
+    clearStore("donors"),
+    clearStore("awards"),
+    clearStore("ceremony_expenses"),
+    clearStore("certificates"),
+    clearStore("media"),
+  ]);
+
   if (canUseCloud(userId)) {
-    const pending = await getPendingChanges();
-    for (const p of pending.filter((item) => ["student", "hifz", "year"].includes(item.entity))) {
-      await clearPending(p.key);
-    }
+    await clearAllPending();
   }
 };
+
+export const deleteAllStudents = deleteAllData;
 
 /**
  * فصل طالب/ة من عام واحد (حلقة/سجل العام) دون حذفه من السجل العام.
@@ -820,31 +898,161 @@ export const deleteStudentsFromYear = async (year: string, ids: number[]) => {
   }
 };
 
-// يحذف بيانات عام واحد فقط (الدرجات + الحفظ لتلك السنة) لكل الطلاب والطالبات،
-// دون حذف الطلاب والطالبات أنفسهم أو بيانات أي عام آخر
-export const deleteYearData = async (year: string) => {
+export interface DeleteYearOptions {
+  /** حذف بقية جداول العام (المعلمين، الجوائز، الشهادات، الداعمين، المصروفات، المسابقات، الوسائط). الافتراضي: true عند حذف عام كامل. */
+  includeAllYearTables?: boolean;
+  /** حذف الطلاب الذين كانوا مسجلين في هذا العام فقط ولا يملكون بيانات في أي عام آخر. */
+  deleteOrphanStudents?: boolean;
+}
+
+// يحذف بيانات عام واحد (الدرجات + الحفظ + المتابعة الشهرية + بيانات العام)
+// دون المساس ببيانات الأعوام الأخرى.
+export const deleteYearData = async (year: string, options?: DeleteYearOptions) => {
   guardWrite();
+  await ensureCache();
   const { deleteItem } = await import("./localDB");
   const userId = await getUserId();
 
+  const isCompetitionSliceOnly = year.endsWith("D") && !options?.includeAllYearTables;
+  const baseYear = year.endsWith("D") ? year.slice(0, -1) : year;
+  const yearsToClear = isCompetitionSliceOnly ? [year] : [baseYear, `${baseYear}D`];
+  const historyKeys = yearsToClear.map((y) => `h${y}`);
+  const includeAllYearTables = options?.includeAllYearTables ?? !isCompetitionSliceOnly;
+
+  const allYearDataBefore = await getCachedYearData();
+  const studentsInTargetYear = new Set(
+    allYearDataBefore.filter((r) => yearsToClear.includes(r.year)).map((r) => r.student_id),
+  );
+
   if (canUseCloud(userId)) {
     try {
-      await Promise.all([
-        supabase.from("year_data").delete().eq("user_id", userId).eq("year", year),
-        supabase.from("hifz_history").delete().eq("user_id", userId).eq("year_key", `h${year}`),
-      ]);
+      const tasks: PromiseLike<unknown>[] = [
+        supabase.from("year_data").delete().eq("user_id", userId).in("year", yearsToClear),
+        supabase.from("hifz_history").delete().eq("user_id", userId).in("year_key", historyKeys),
+      ];
+      if (!isCompetitionSliceOnly) {
+        tasks.push(
+          supabase.from("monthly_tracking").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("monthly_submissions").delete().eq("user_id", userId).eq("year", baseYear),
+        );
+      }
+      if (includeAllYearTables) {
+        const cachedMedia = (await getCachedMedia()).filter((m) => m.year === baseYear);
+        const { data: cloudMedia } = await supabase
+          .from("media")
+          .select("file_path")
+          .eq("user_id", userId)
+          .eq("year", baseYear);
+        const mediaPaths = Array.from(
+          new Set(
+            [
+              ...cachedMedia.map((m) => m.file_path),
+              ...(cloudMedia || []).map((m) => m.file_path),
+            ].filter(Boolean),
+          ),
+        );
+        if (mediaPaths.length > 0) {
+          await supabase.storage.from("media").remove(mediaPaths);
+        }
+
+        tasks.push(
+          supabase.from("teacher_portals").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("teachers").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("teacher_bonuses").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("awards").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("certificates").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("donors").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("ceremony_expenses").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("student_competitions").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("exam_questions").delete().eq("user_id", userId).eq("year", baseYear),
+          supabase.from("media").delete().eq("user_id", userId).eq("year", baseYear),
+        );
+      }
+      await Promise.all(tasks);
     } catch (err) {
       console.error("Cloud year wipe failed:", err);
     }
   }
 
-  const allYearData = await getCachedYearData();
-  for (const row of allYearData.filter((r) => r.year === year)) {
+  for (const row of allYearDataBefore.filter((r) => yearsToClear.includes(r.year))) {
     await deleteItem("year_data", [row.student_id, row.year]);
+    if (canUseCloud(userId)) {
+      await clearPending(`year:${row.student_id}|${row.year}`);
+    } else {
+      await markDirty("year", "delete", { student_id: row.student_id, year: row.year });
+    }
   }
+
   const allHistory = await getCachedHifzHistory();
-  for (const row of allHistory.filter((r) => r.year_key === `h${year}`)) {
+  for (const row of allHistory.filter((r) => historyKeys.includes(r.year_key))) {
     await deleteItem("hifz_history", [row.student_id, row.year_key]);
+    if (canUseCloud(userId)) {
+      await clearPending(`hifz:${row.student_id}|${row.year_key}`);
+    } else {
+      await markDirty("hifz", "delete", { student_id: row.student_id, year_key: row.year_key });
+    }
+  }
+
+  if (includeAllYearTables) {
+    const [teachers, bonuses, donors, awards, expenses, certs, media] = await Promise.all([
+      getCachedTeachers(),
+      getCachedTeacherBonuses(),
+      getCachedDonors(),
+      getCachedAwards(),
+      getCachedCeremonyExpenses(),
+      getCachedCertificates(),
+      getCachedMedia(),
+    ]);
+
+    for (const r of teachers.filter((t) => t.year === baseYear)) {
+      await deleteCachedTeacher(r.id);
+      if (canUseCloud(userId)) await clearPending(`teacher:${r.id}`);
+      else await markDirty("teacher", "delete", { id: r.id });
+    }
+    for (const r of bonuses.filter((b) => b.year === baseYear)) {
+      await deleteCachedTeacherBonus(r.id);
+      if (canUseCloud(userId)) await clearPending(`teacher_bonus:${r.id}`);
+      else await markDirty("teacher_bonus", "delete", { id: r.id });
+    }
+    for (const r of donors.filter((d) => d.year === baseYear)) {
+      await deleteCachedDonor(r.id);
+      if (canUseCloud(userId)) await clearPending(`donor:${r.id}`);
+      else await markDirty("donor", "delete", { id: r.id });
+    }
+    for (const r of awards.filter((a) => a.year === baseYear)) {
+      await deleteCachedAward(r.id);
+      if (canUseCloud(userId)) await clearPending(`award:${r.id}`);
+      else await markDirty("award", "delete", { id: r.id });
+    }
+    for (const r of expenses.filter((e) => e.year === baseYear)) {
+      await deleteCachedCeremonyExpense(r.id);
+      if (canUseCloud(userId)) await clearPending(`expense:${r.id}`);
+      else await markDirty("expense", "delete", { id: r.id });
+    }
+    for (const r of certs.filter((c) => c.year === baseYear)) {
+      await deleteCachedCertificate(r.id);
+      if (canUseCloud(userId)) await clearPending(`certificate:${r.id}`);
+      else await markDirty("certificate", "delete", { id: r.id });
+    }
+    for (const r of media.filter((m) => m.year === baseYear)) {
+      await deleteCachedMedia(r.id);
+      if (canUseCloud(userId)) await clearPending(`media:${r.id}`);
+      else await markDirty("media", "delete", { id: r.id, file_path: r.file_path });
+    }
+  }
+
+  if (options?.deleteOrphanStudents && studentsInTargetYear.size > 0) {
+    const remainingYearData = await getCachedYearData();
+    const studentsWithRemainingYears = new Set(remainingYearData.map((r) => r.student_id));
+    const orphanIds = Array.from(studentsInTargetYear).filter(
+      (id) => !studentsWithRemainingYears.has(id),
+    );
+    if (orphanIds.length > 0) {
+      await deleteStudents(orphanIds);
+      if (canUseCloud(userId)) {
+        await syncToCloud();
+      }
+    }
   }
 };
 
@@ -1643,8 +1851,48 @@ const runSyncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
 
     // Refresh pending after potential remap
     const pendingAfter = await getPendingChanges();
+    const hifzDeletes = pendingAfter.filter((p) => p.entity === "hifz" && p.op === "delete");
+    const yearDeletes = pendingAfter.filter((p) => p.entity === "year" && p.op === "delete");
     const hifzPending = pendingAfter.filter((p) => p.entity === "hifz" && p.op === "upsert");
     const yearPending = pendingAfter.filter((p) => p.entity === "year" && p.op === "upsert");
+
+    for (const p of hifzDeletes) {
+      if (typeof p.ref.student_id === "number" && p.ref.year_key) {
+        const { error } = await supabase
+          .from("hifz_history")
+          .delete()
+          .eq("user_id", userId)
+          .eq("student_id", p.ref.student_id)
+          .eq("year_key", p.ref.year_key);
+        if (error) {
+          console.error("Hifz delete failed:", error);
+          hadError = true;
+          tick("حذف سجل الحفظ");
+          continue;
+        }
+      }
+      await clearPending(p.key);
+      tick("حذف سجل الحفظ");
+    }
+
+    for (const p of yearDeletes) {
+      if (typeof p.ref.student_id === "number" && p.ref.year) {
+        const { error } = await supabase
+          .from("year_data")
+          .delete()
+          .eq("user_id", userId)
+          .eq("student_id", p.ref.student_id)
+          .eq("year", p.ref.year);
+        if (error) {
+          console.error("Year data delete failed:", error);
+          hadError = true;
+          tick("حذف بيانات العام");
+          continue;
+        }
+      }
+      await clearPending(p.key);
+      tick("حذف بيانات العام");
+    }
 
     // 3) Hifz upserts
     if (hifzPending.length > 0) {
@@ -1933,65 +2181,125 @@ export const saveGlobalStudents = async (students: Student[]) => {
   // handled per-student via saveStudent
 };
 
-// ===== Merge duplicate students by name (case-insensitive, trimmed) =====
+// ===== حذف/دمج أسماء الطلاب المكررة (باستخدام التطبيع العربي الموحّد) =====
 export const mergeDuplicateStudents = async (): Promise<number> => {
   guardWrite();
+  await ensureCache();
   const students = await getCachedStudents();
   const allHistory = await getCachedHifzHistory();
   const allYearData = await getCachedYearData();
 
-  const norm = (s: string) => (s || "").trim().replace(/\s+/g, " ");
   const groups: Record<string, typeof students> = {};
   for (const s of students) {
-    const key = norm(s.name);
+    const key = normalizeStudentName(s.name);
     if (!key) continue;
     (groups[key] = groups[key] || []).push(s);
   }
 
-  const { putCachedHifzRow, putCachedYearData, deleteItem } = await import("./localDB");
+  const { putCachedHifzRow, putCachedYearData, deleteItem, deleteCachedStudent } =
+    await import("./localDB");
   let mergedCount = 0;
 
   for (const key in groups) {
     const group = groups[key];
     if (group.length < 2) continue;
-    // Keep the one with the smallest id as primary
+    // نحتفظ بالسجل الأقدم (الأصغر معرّفاً) كسجل أساسي وننقل إليه أي بيانات ناقصة
     group.sort((a, b) => a.id - b.id);
-    const primary = group[0];
+    const primary = { ...group[0] };
     const dupes = group.slice(1);
+    let primaryUpdated = false;
 
     for (const dup of dupes) {
-      // Move hifz history (don't overwrite existing primary keys with empty values)
+      // دمج بيانات ملف الطالب/ة الأساسية إن كانت فارغة في السجل الأساسي
+      if (!primary.teacher && dup.teacher) {
+        primary.teacher = dup.teacher;
+        primaryUpdated = true;
+      }
+      for (const field of [
+        "gender",
+        "hijri_join_date",
+        "initial_hifz",
+        "first_competition_year",
+        "school_grade",
+        "guardian_phone",
+        "student_phone",
+        "notes",
+      ] as const) {
+        if (!primary[field] && dup[field]) {
+          primary[field] = dup[field];
+          primaryUpdated = true;
+        }
+      }
+      if ((!primary.status || primary.status === "طبيعي") && dup.status && dup.status !== "طبيعي") {
+        primary.status = dup.status;
+        primaryUpdated = true;
+      }
+      if (dup.custom_fields && Object.keys(dup.custom_fields).length > 0) {
+        primary.custom_fields = {
+          ...dup.custom_fields,
+          ...(primary.custom_fields || {}),
+        };
+        primaryUpdated = true;
+      }
+
+      // نقل سجل الحفظ التاريخي (مع عدم الكتابة فوق قيم موجودة)
       const dupHistory = allHistory.filter((h) => h.student_id === dup.id);
       for (const h of dupHistory) {
         const existing = allHistory.find(
           (r) => r.student_id === primary.id && r.year_key === h.year_key,
         );
         if (!existing || !existing.value || existing.value === "0") {
-          await putCachedHifzRow({ student_id: primary.id, year_key: h.year_key, value: h.value });
+          const updatedRow = { student_id: primary.id, year_key: h.year_key, value: h.value };
+          await putCachedHifzRow(updatedRow);
+          if (existing) existing.value = h.value;
+          else allHistory.push(updatedRow);
           await markDirty("hifz", "upsert", { student_id: primary.id, year_key: h.year_key });
         }
         await deleteItem("hifz_history", [h.student_id, h.year_key]);
+        await clearPending(`hifz:${h.student_id}|${h.year_key}`);
       }
-      // Move year data
+
+      // نقل بيانات الأعوام
       const dupYears = allYearData.filter((y) => y.student_id === dup.id);
       for (const y of dupYears) {
         const existing = allYearData.find((r) => r.student_id === primary.id && r.year === y.year);
-        if (!existing || (!existing.parts && existing.total === "0")) {
-          await putCachedYearData({ ...y, student_id: primary.id });
+        if (!existing || (!existing.parts && (!existing.total || existing.total === "0"))) {
+          const updatedYear = {
+            ...y,
+            student_id: primary.id,
+            teacher: y.teacher || existing?.teacher || primary.teacher || "",
+          };
+          await putCachedYearData(updatedYear);
+          if (existing) Object.assign(existing, updatedYear);
+          else allYearData.push(updatedYear);
           await markDirty("year", "upsert", { student_id: primary.id, year: y.year });
         }
         await deleteItem("year_data", [y.student_id, y.year]);
+        await clearPending(`year:${y.student_id}|${y.year}`);
       }
-      // Delete duplicate student
-      const { deleteCachedStudent } = await import("./localDB");
+
+      // حذف السجل المكرر
       await deleteCachedStudent(dup.id);
+      await clearPending(`student:${dup.id}`);
       await markDirty("student", "delete", { id: dup.id });
       mergedCount++;
     }
+
+    if (primaryUpdated) {
+      await putCachedStudent(primary);
+      await markDirty("student", "upsert", { id: primary.id });
+    }
+  }
+
+  const userId = await getUserId();
+  if (mergedCount > 0 && canUseCloud(userId)) {
+    await syncToCloud();
   }
 
   return mergedCount;
 };
+
+export const deleteDuplicateStudents = mergeDuplicateStudents;
 
 // ================= المتابعة الشهرية =================
 // اتصال مباشر بقاعدة البيانات (بدون تخزين مؤقت أوفلاين كامل، على غرار

@@ -26,7 +26,8 @@ export function normalizeStudentName(name: string | null | undefined): string {
     .replace(/ى/g, "ي") // توحيد الألف المقصورة
     .replace(/ة/g, "ه") // توحيد التاء المربوطة (شائع في الإدخال اليدوي)
     .replace(WHITESPACE_RUN, " ")
-    .trim();
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -59,4 +60,17 @@ export function getDuplicateCountFor(
   const normalized = normalizeStudentName(name);
   if (!normalized) return 0;
   return duplicateCounts.get(normalized) || 0;
+}
+
+/**
+ * يحسب عدد السجلات الزائدة المكررة التي سيتم حذفها عند إزالة التكرار
+ * (مع بقاء سجل أصلي واحد لكل اسم).
+ */
+export function getExtraDuplicateRecordsCount(students: Array<{ name?: string | null }>): number {
+  const counts = getDuplicateNameCounts(students);
+  let extra = 0;
+  for (const count of counts.values()) {
+    if (count > 1) extra += count - 1;
+  }
+  return extra;
 }

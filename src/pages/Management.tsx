@@ -56,7 +56,7 @@ const emptyCounts: Counts = {
 };
 
 const Management = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [year, setYear] = useState("");
   const [counts, setCounts] = useState<Counts>(emptyCounts);
   const [loading, setLoading] = useState(true);
@@ -269,6 +269,13 @@ const Management = () => {
                 <SettingsIcon className="h-4 w-4" /> الإعدادات
               </Button>
             </Link>
+            {isAdmin && (
+              <Link to="/users">
+                <Button variant="outline" className="gap-1">
+                  <Users className="h-4 w-4" /> إدارة المستخدمين
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>

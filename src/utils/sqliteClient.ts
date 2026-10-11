@@ -26,9 +26,20 @@ CREATE TABLE IF NOT EXISTS students (
   id INTEGER PRIMARY KEY,
   name TEXT,
   teacher TEXT,
-  user_id TEXT
+  user_id TEXT,
+  gender TEXT,
+  hijri_join_date TEXT,
+  initial_hifz TEXT,
+  first_competition_year TEXT,
+  status TEXT,
+  school_grade TEXT,
+  guardian_phone TEXT,
+  student_phone TEXT,
+  custom_fields TEXT,
+  notes TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_students_teacher ON students(teacher);
+CREATE INDEX IF NOT EXISTS idx_students_school_grade ON students(school_grade);
 
 CREATE TABLE IF NOT EXISTS hifz_history (
   student_id INTEGER NOT NULL,
@@ -179,6 +190,24 @@ CREATE TABLE IF NOT EXISTS media (
 CREATE INDEX IF NOT EXISTS idx_media_year_month ON media(year, month);
 `;
 
+/**
+ * أعمدة أُضيفت إلى جدول students بعد إصداره الأول.
+ * تُنفَّذ على قواعد البيانات المحلية القائمة (أجهزة ثبّتت التطبيق قبل هذا
+ * التحديث)؛ وخطأ «العمود موجود مسبقاً» يُتجاهل بأمان.
+ */
+const MIGRATE_STUDENTS_COLS = [
+  "ALTER TABLE students ADD COLUMN gender TEXT;",
+  "ALTER TABLE students ADD COLUMN hijri_join_date TEXT;",
+  "ALTER TABLE students ADD COLUMN initial_hifz TEXT;",
+  "ALTER TABLE students ADD COLUMN first_competition_year TEXT;",
+  "ALTER TABLE students ADD COLUMN status TEXT;",
+  "ALTER TABLE students ADD COLUMN school_grade TEXT;",
+  "ALTER TABLE students ADD COLUMN guardian_phone TEXT;",
+  "ALTER TABLE students ADD COLUMN student_phone TEXT;",
+  "ALTER TABLE students ADD COLUMN custom_fields TEXT;",
+  "ALTER TABLE students ADD COLUMN notes TEXT;",
+];
+
 let sqliteConn: SQLiteConnectionType | null = null;
 let dbConn: SQLiteDBConnection | null = null;
 let initPromise: Promise<SQLiteDBConnection> | null = null;
@@ -248,6 +277,15 @@ export const getDB = (): Promise<SQLiteDBConnection> => {
 
       await db.open();
       await db.execute(SCHEMA_SQL, true);
+
+      // ترحيل قواعد البيانات المحلية القائمة: إضافة أعمدة الطلاب الجديدة.
+      for (const sql of MIGRATE_STUDENTS_COLS) {
+        try {
+          await db.run(sql, [], true);
+        } catch {
+          // العمود موجود مسبقاً — لا شيء يُعمل.
+        }
+      }
 
       dbConn = db;
       return db;

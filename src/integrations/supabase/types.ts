@@ -8,6 +8,261 @@ export type Database = {
   };
   public: {
     Tables: {
+      data_access_grants: {
+        Row: {
+          access_level: string;
+          created_at: string;
+          grantee_id: string;
+          id: string;
+          note: string | null;
+          owner_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          access_level?: string;
+          created_at?: string;
+          grantee_id: string;
+          id?: string;
+          note?: string | null;
+          owner_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          access_level?: string;
+          created_at?: string;
+          grantee_id?: string;
+          id?: string;
+          note?: string | null;
+          owner_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "data_access_grants_grantee_id_fkey";
+            columns: ["grantee_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "data_access_grants_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      monthly_submissions: {
+        Row: {
+          attendance_score: number;
+          behavior_score: number;
+          code: string | null;
+          created_at: string;
+          id: string;
+          memorization_from_ayah: number | null;
+          memorization_from_surah: number | null;
+          memorization_hifz_score: number;
+          memorization_recitation_score: number;
+          memorization_to_ayah: number | null;
+          memorization_to_surah: number | null;
+          month: number;
+          notes: string | null;
+          portal_id: string | null;
+          reviewed_at: string | null;
+          review_from_ayah: number | null;
+          review_from_surah: number | null;
+          review_hifz_score: number;
+          review_note: string | null;
+          review_recitation_score: number;
+          review_to_ayah: number | null;
+          review_to_surah: number | null;
+          source: string;
+          status: string;
+          student_id: number;
+          student_name: string;
+          teacher_name: string | null;
+          updated_at: string;
+          user_id: string;
+          year: string;
+        };
+        Insert: {
+          attendance_score?: number;
+          behavior_score?: number;
+          code?: string | null;
+          created_at?: string;
+          id?: string;
+          memorization_from_ayah?: number | null;
+          memorization_from_surah?: number | null;
+          memorization_hifz_score?: number;
+          memorization_recitation_score?: number;
+          memorization_to_ayah?: number | null;
+          memorization_to_surah?: number | null;
+          month: number;
+          notes?: string | null;
+          portal_id?: string | null;
+          reviewed_at?: string | null;
+          review_from_ayah?: number | null;
+          review_from_surah?: number | null;
+          review_hifz_score?: number;
+          review_note?: string | null;
+          review_recitation_score?: number;
+          review_to_ayah?: number | null;
+          review_to_surah?: number | null;
+          source?: string;
+          status?: string;
+          student_id: number;
+          student_name: string;
+          teacher_name?: string | null;
+          updated_at?: string;
+          user_id: string;
+          year: string;
+        };
+        Update: {
+          attendance_score?: number;
+          behavior_score?: number;
+          code?: string | null;
+          created_at?: string;
+          id?: string;
+          memorization_from_ayah?: number | null;
+          memorization_from_surah?: number | null;
+          memorization_hifz_score?: number;
+          memorization_recitation_score?: number;
+          memorization_to_ayah?: number | null;
+          memorization_to_surah?: number | null;
+          month?: number;
+          notes?: string | null;
+          portal_id?: string | null;
+          reviewed_at?: string | null;
+          review_from_ayah?: number | null;
+          review_from_surah?: number | null;
+          review_hifz_score?: number;
+          review_note?: string | null;
+          review_recitation_score?: number;
+          review_to_ayah?: number | null;
+          review_to_surah?: number | null;
+          source?: string;
+          status?: string;
+          student_id?: number;
+          student_name?: string;
+          teacher_name?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          year?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "monthly_submissions_portal_id_fkey";
+            columns: ["portal_id"];
+            isOneToOne: false;
+            referencedRelation: "teacher_portals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "monthly_submissions_student_id_fkey";
+            columns: ["student_id"];
+            isOneToOne: false;
+            referencedRelation: "students";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "monthly_submissions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      profiles: {
+        Row: {
+          created_at: string;
+          display_name: string | null;
+          email: string | null;
+          id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          display_name?: string | null;
+          email?: string | null;
+          id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          display_name?: string | null;
+          email?: string | null;
+          id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      teacher_portals: {
+        Row: {
+          active: boolean;
+          code: string;
+          created_at: string;
+          id: string;
+          month: number;
+          teacher_name: string;
+          updated_at: string;
+          user_id: string;
+          year: string;
+        };
+        Insert: {
+          active?: boolean;
+          code: string;
+          created_at?: string;
+          id?: string;
+          month: number;
+          teacher_name: string;
+          updated_at?: string;
+          user_id: string;
+          year: string;
+        };
+        Update: {
+          active?: boolean;
+          code?: string;
+          created_at?: string;
+          id?: string;
+          month?: number;
+          teacher_name?: string;
+          updated_at?: string;
+          user_id?: string;
+          year?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "teacher_portals_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      user_roles: {
+        Row: {
+          created_at: string;
+          id: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       awards: {
         Row: {
           amount: number;
@@ -334,24 +589,54 @@ export type Database = {
       students: {
         Row: {
           created_at: string;
+          custom_fields: Json | null;
+          first_competition_year: string | null;
+          gender: string | null;
+          guardian_phone: string | null;
+          hijri_join_date: string | null;
           id: number;
+          initial_hifz: string | null;
           name: string;
+          notes: string | null;
+          school_grade: string | null;
+          status: string | null;
+          student_phone: string | null;
           teacher: string;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           created_at?: string;
+          custom_fields?: Json | null;
+          first_competition_year?: string | null;
+          gender?: string | null;
+          guardian_phone?: string | null;
+          hijri_join_date?: string | null;
           id?: number;
+          initial_hifz?: string | null;
           name?: string;
+          notes?: string | null;
+          school_grade?: string | null;
+          status?: string | null;
+          student_phone?: string | null;
           teacher?: string;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           created_at?: string;
+          custom_fields?: Json | null;
+          first_competition_year?: string | null;
+          gender?: string | null;
+          guardian_phone?: string | null;
+          hijri_join_date?: string | null;
           id?: number;
+          initial_hifz?: string | null;
           name?: string;
+          notes?: string | null;
+          school_grade?: string | null;
+          status?: string | null;
+          student_phone?: string | null;
           teacher?: string;
           updated_at?: string;
           user_id?: string;
@@ -425,6 +710,8 @@ export type Database = {
           created_at: string;
           id: string;
           manager_signature: string;
+          student_custom_columns: Json;
+          student_statuses: Json;
           supervisor_signature: string;
           table_filters: Json;
           teacher_signature: string;
@@ -437,6 +724,8 @@ export type Database = {
           created_at?: string;
           id?: string;
           manager_signature?: string;
+          student_custom_columns?: Json;
+          student_statuses?: Json;
           supervisor_signature?: string;
           table_filters?: Json;
           teacher_signature?: string;
@@ -449,6 +738,8 @@ export type Database = {
           created_at?: string;
           id?: string;
           manager_signature?: string;
+          student_custom_columns?: Json;
+          student_statuses?: Json;
           supervisor_signature?: string;
           table_filters?: Json;
           teacher_signature?: string;
@@ -755,10 +1046,97 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      open_teacher_portal: {
+        Args: { p_code: string };
+        Returns: {
+          code: string;
+          teacher_name: string;
+          year: string;
+          month: number;
+          student_id: number;
+          student_name: string;
+          prev_memo_surah: number | null;
+          prev_memo_ayah: number | null;
+          prev_review_surah: number | null;
+          prev_review_ayah: number | null;
+          submission: {
+            status: string;
+            memorization_from_surah: number | null;
+            memorization_from_ayah: number | null;
+            memorization_to_surah: number | null;
+            memorization_to_ayah: number | null;
+            memorization_hifz_score: number;
+            memorization_recitation_score: number;
+            review_from_surah: number | null;
+            review_from_ayah: number | null;
+            review_to_surah: number | null;
+            review_to_ayah: number | null;
+            review_hifz_score: number;
+            review_recitation_score: number;
+            attendance_score: number;
+            behavior_score: number;
+            notes: string | null;
+            submitted_at: string;
+          } | null;
+        }[];
+      };
+      submit_teacher_monthly: {
+        Args: {
+          p_code: string;
+          p_student_id: number;
+          p_student_name: string;
+          p_year: string;
+          p_month: number;
+          p_memorization_from_surah?: number | null;
+          p_memorization_from_ayah?: number | null;
+          p_memorization_to_surah?: number | null;
+          p_memorization_to_ayah?: number | null;
+          p_memorization_hifz_score?: number;
+          p_memorization_recitation_score?: number;
+          p_review_from_surah?: number | null;
+          p_review_from_ayah?: number | null;
+          p_review_to_surah?: number | null;
+          p_review_to_ayah?: number | null;
+          p_review_hifz_score?: number;
+          p_review_recitation_score?: number;
+          p_attendance_score?: number;
+          p_behavior_score?: number;
+          p_notes?: string | null;
+        };
+        Returns: {
+          id: string;
+          user_id: string;
+          portal_id: string;
+          code: string;
+          student_id: number;
+          student_name: string;
+          year: string;
+          month: number;
+          memorization_from_surah: number | null;
+          memorization_from_ayah: number | null;
+          memorization_to_surah: number | null;
+          memorization_to_ayah: number | null;
+          memorization_hifz_score: number;
+          memorization_recitation_score: number;
+          review_from_surah: number | null;
+          review_from_ayah: number | null;
+          review_to_surah: number | null;
+          review_to_ayah: number | null;
+          review_hifz_score: number;
+          review_recitation_score: number;
+          attendance_score: number;
+          behavior_score: number;
+          notes: string | null;
+          status: string;
+          review_note: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+      };
     };
     Enums: {
-      [_ in never]: never;
+      app_role: "admin" | "user";
     };
     CompositeTypes: {
       [_ in never]: never;

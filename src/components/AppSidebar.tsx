@@ -10,11 +10,14 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "@/lib/router-compat";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Trophy,
   GraduationCap,
   Users,
+  UsersRound,
   Sparkles,
   Home as HomeIcon,
   Globe2,
@@ -29,6 +32,11 @@ import {
   FileText,
   LayoutGrid,
   ArrowLeftRight,
+  Link2,
+  Inbox,
+  UserCog,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -36,13 +44,18 @@ interface NavItem {
   to: string;
   label: string;
   icon: typeof Trophy;
+  /** شارة صغيرة تظهر يسار الاسم (مثلاً «المسؤول») */
+  badge?: string;
 }
 
 const mainItems: NavItem[] = [
   { to: "/quran", label: "الرئيسية", icon: LayoutGrid },
   { to: "/students", label: "الطلاب", icon: GraduationCap },
+  { to: "/halaqat", label: "إدارة الحلقات", icon: UsersRound },
   { to: "/teachers", label: "المعلمين", icon: Users },
   { to: "/monthly", label: "المتابعة الشهرية", icon: Sparkles },
+  { to: "/teacher-links", label: "روابط المعلمين والمعلمات", icon: Link2 },
+  { to: "/submissions", label: "وارد المعلمين والمعلمات", icon: Inbox },
   { to: "/ramadan-competition", label: "المسابقة الرمضانية", icon: Trophy },
 ];
 
@@ -67,6 +80,11 @@ const systemItems: NavItem[] = [
   { to: "/settings", label: "الإعدادات", icon: SettingsIcon },
 ];
 
+/** تظهر للمسؤول فقط */
+const adminItems: NavItem[] = [
+  { to: "/users", label: "إدارة المستخدمين", icon: UserCog, badge: "المسؤول" },
+];
+
 const switchItems: NavItem[] = [{ to: "/", label: "تبديل القسم", icon: ArrowLeftRight }];
 
 const NavGroup = ({
@@ -77,29 +95,100 @@ const NavGroup = ({
   label: string;
   items: NavItem[];
   pathname: string;
-}) => (
-  <SidebarGroup>
-    <SidebarGroupLabel>{label}</SidebarGroupLabel>
-    <SidebarGroupContent>
-      <SidebarMenu>
-        {items.map((item) => (
-          <SidebarMenuItem key={item.to}>
-            <SidebarMenuButton asChild isActive={pathname === item.to}>
-              <Link to={item.to}>
-                <item.icon />
-                <span>{item.label}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
-      </SidebarMenu>
-    </SidebarGroupContent>
-  </SidebarGroup>
-);
+}) => {
+  if (items.length === 0) return null;
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.to}>
+              <SidebarMenuButton asChild isActive={pathname === item.to} tooltip={item.label}>
+                <Link to={item.to}>
+                  <item.icon />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className="rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-black text-amber-600 ring-1 ring-amber-400/40">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+};
+
+/**
+ * مبدّل «الاطلاع على بيانات مستخدم آخر» (عرض باسم).
+ *
+ * يظهر فقط لمن مُنح إذن الاطلاع من صاحب بيانات، أو لمن هو في وضع الاطلاع
+ * فعلاً. الدخول/الخروج يعيد تحميل الصفحة لتفريغ بيانات المالك السابق من
+ * الذاكرة والكاش المحلي.
+ */
+const ViewAsSwitcher = () => {
+  const { sharedWithMe, viewAs, setViewAs } = useAuth();
+
+  if (!viewAs && sharedWithMe.length === 0) return null;
+
+  const enter = (ownerId: string, name: string, email: string | null) => {
+    setViewAs({ id: ownerId, name, email });
+    if (typeof window !== "undefined") window.location.reload();
+  };
+
+  const exit = () => {
+    setViewAs(null);
+    if (typeof window !== "undefined") window.location.reload();
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/40 p-2">
+      {viewAs ? (
+        <>
+          <p className="mb-1.5 px-1 text-[10px] font-bold text-amber-600">
+            تطالع بيانات: {viewAs.name}
+          </p>
+          <Button
+            onClick={exit}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center gap-2 text-amber-700 hover:bg-amber-500/15"
+          >
+            <EyeOff className="h-4 w-4" />
+            <span>العودة لبياناتي</span>
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="mb-1.5 px-1 text-[10px] font-bold text-muted-foreground">
+            مسموح لك بالاطلاع على
+          </p>
+          {sharedWithMe.map((owner) => (
+            <Button
+              key={owner.owner_id}
+              onClick={() => enter(owner.owner_id, owner.name, owner.email)}
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+            >
+              <Eye className="h-4 w-4 shrink-0" />
+              <span className="truncate">{owner.name}</span>
+            </Button>
+          ))}
+        </>
+      )}
+    </div>
+  );
+};
 
 export function AppSidebar() {
   const location = useLocation();
   const pathname = location?.pathname || "";
+  const { isAdmin } = useAuth();
 
   return (
     <Sidebar side="right" collapsible="icon">
@@ -115,10 +204,16 @@ export function AppSidebar() {
         <NavGroup label="الرئيسية" items={mainItems} pathname={pathname} />
         <NavGroup label="المسابقات" items={competitionItems} pathname={pathname} />
         <NavGroup label="أقسام أخرى" items={otherItems} pathname={pathname} />
-        <NavGroup label="النظام" items={systemItems} pathname={pathname} />
+        <NavGroup
+          label="النظام"
+          items={isAdmin ? [...systemItems, ...adminItems] : systemItems}
+          pathname={pathname}
+        />
         <NavGroup label="" items={switchItems} pathname={pathname} />
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter className="group-data-[collapsible=icon]:hidden">
+        <ViewAsSwitcher />
+      </SidebarFooter>
     </Sidebar>
   );
 }

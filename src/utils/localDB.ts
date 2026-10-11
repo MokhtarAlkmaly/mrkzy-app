@@ -47,8 +47,47 @@ interface TableConfig {
 
 const TABLES: Record<string, TableConfig> = {
   [STORES.students]: {
-    columns: ["id", "name", "teacher", "user_id"],
+    columns: [
+      "id",
+      "name",
+      "teacher",
+      "user_id",
+      "gender",
+      "hijri_join_date",
+      "initial_hifz",
+      "first_competition_year",
+      "status",
+      "school_grade",
+      "guardian_phone",
+      "student_phone",
+      "custom_fields",
+      "notes",
+    ],
     pk: ["id"],
+    // الأعمدة المخصصة تُخزَّن نصاً (JSON) داخل SQLite وتُفكّ عند القراءة.
+    toRow: (item) => {
+      const it = item as Record<string, unknown>;
+      const row: SqlRow = {};
+      for (const [key, value] of Object.entries(it)) {
+        row[key] = (value === undefined ? null : value) as SqlValue;
+      }
+      row.custom_fields =
+        typeof it.custom_fields === "object" && it.custom_fields !== null
+          ? JSON.stringify(it.custom_fields)
+          : ((it.custom_fields as SqlValue | undefined) ?? null);
+      return row;
+    },
+    fromRow: (row) => {
+      let customFieldsObj = {};
+      if (row.custom_fields) {
+        try {
+          customFieldsObj = JSON.parse(row.custom_fields as string);
+        } catch {
+          customFieldsObj = {};
+        }
+      }
+      return { ...row, custom_fields: customFieldsObj };
+    },
   },
   [STORES.hifzHistory]: {
     columns: ["student_id", "year_key", "value"],
@@ -295,6 +334,16 @@ export interface CachedStudent {
   name: string;
   teacher: string;
   user_id: string;
+  gender?: string | null;
+  hijri_join_date?: string | null;
+  initial_hifz?: string | null;
+  first_competition_year?: string | null;
+  status?: string | null;
+  school_grade?: string | null;
+  guardian_phone?: string | null;
+  student_phone?: string | null;
+  custom_fields?: Record<string, string>;
+  notes?: string | null;
 }
 
 export const cacheStudents = async (students: CachedStudent[]) =>

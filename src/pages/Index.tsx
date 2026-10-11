@@ -932,27 +932,71 @@ const Index = () => {
                   تُحذف الطلاب والطالبات المختارين بكل بياناتهم من كل الأعوام
                 </div>
                 {deleteMode === "selected" && (
-                  <div className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-lg bg-secondary/40 p-2">
+                  <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border bg-card">
                     {students.length === 0 ? (
-                      <p className="p-2 text-xs text-muted-foreground">
+                      <p className="p-3 text-center text-xs text-muted-foreground">
                         لا توجد طلاب وطالبات بهذا العام
                       </p>
                     ) : (
-                      students.map((s) => (
-                        <label
-                          key={s.id}
-                          className="flex cursor-pointer items-center gap-2 rounded-lg p-1.5 hover:bg-background"
-                        >
-                          <Checkbox
-                            checked={selectedToDelete.has(s.id)}
-                            onCheckedChange={() => toggleSelectedToDelete(s.id)}
-                          />
-                          <span className="text-sm">
-                            {s.name || "بدون اسم"}{" "}
-                            <span className="text-xs text-muted-foreground">— {s.teacher}</span>
-                          </span>
-                        </label>
-                      ))
+                      <table className="w-full border-separate border-spacing-0 text-xs">
+                        <thead className="sticky top-0 z-10 bg-gradient-to-l from-primary via-emerald-700 to-teal-800 text-primary-foreground">
+                          <tr>
+                            <th className="w-8 border-b border-l border-white/15 px-2 py-2 text-center">
+                              ✓
+                            </th>
+                            <th className="w-8 border-b border-l border-white/15 px-2 py-2 text-center font-black">
+                              م
+                            </th>
+                            <th className="border-b border-l border-white/15 px-2.5 py-2 text-right font-bold">
+                              اسم الطالب/الطالبة
+                            </th>
+                            <th className="border-b border-l border-white/15 px-2.5 py-2 text-right font-bold">
+                              المعلم/ة
+                            </th>
+                            <th className="w-16 border-b border-white/15 px-2 py-2 text-center font-bold">
+                              الأجزاء
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map((s, idx) => {
+                            const checked = selectedToDelete.has(s.id);
+                            return (
+                              <tr
+                                key={s.id}
+                                onClick={() => toggleSelectedToDelete(s.id)}
+                                className={`cursor-pointer transition-colors ${
+                                  checked
+                                    ? "bg-destructive/10 hover:bg-destructive/15"
+                                    : "odd:bg-card even:bg-secondary/25 hover:bg-primary/[0.06]"
+                                }`}
+                              >
+                                <td
+                                  className="border-b border-l border-border/60 px-2 py-1.5 text-center"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={() => toggleSelectedToDelete(s.id)}
+                                  />
+                                </td>
+                                <td className="border-b border-l border-border/60 px-2 py-1.5 text-center font-black text-primary">
+                                  {idx + 1}
+                                </td>
+                                <td className="border-b border-l border-border/60 px-2.5 py-1.5 font-bold">
+                                  {s.name || "بدون اسم"}
+                                </td>
+                                <td className="border-b border-l border-border/60 px-2.5 py-1.5 text-muted-foreground">
+                                  {s.teacher || "—"}
+                                </td>
+                                <td className="border-b border-border/60 px-2 py-1.5 text-center font-bold text-amber-800">
+                                  {s.yearData?.parts || "0"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     )}
                   </div>
                 )}

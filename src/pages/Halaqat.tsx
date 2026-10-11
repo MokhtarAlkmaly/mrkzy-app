@@ -350,60 +350,110 @@ const Halaqat = () => {
                 key={teacher}
                 className="overflow-hidden rounded-[1.75rem] border-white/70 bg-card/90 shadow-xl shadow-primary/5"
               >
-                <CardHeader className="border-b bg-primary/[0.04] pb-3">
+                <CardHeader className="border-b bg-gradient-to-l from-primary/[0.08] via-emerald-500/[0.04] to-transparent pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <CardTitle className="text-lg">{teacher}</CardTitle>
-                      <CardDescription>{teacherStudents.length} طالب</CardDescription>
+                      <CardTitle className="text-lg font-black text-foreground">
+                        {teacher}
+                      </CardTitle>
+                      <CardDescription>
+                        {teacherStudents.length} طالب/طالبة في الحلقة
+                      </CardDescription>
                     </div>
-                    <UsersRound className="h-5 w-5 text-primary" />
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/12 text-primary ring-1 ring-primary/20">
+                      <UsersRound className="h-5 w-5" />
+                    </span>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-2 p-3">
+                <CardContent className="p-0">
                   {teacherStudents.length === 0 ? (
-                    <p className="p-3 text-center text-sm text-muted-foreground">
+                    <p className="p-5 text-center text-sm text-muted-foreground">
                       لا يوجد طلاب مرتبطون بهذه الحلقة بعد.
                     </p>
                   ) : (
-                    teacherStudents.map((student) => (
-                      <div
-                        key={student.id}
-                        className="flex flex-wrap items-center gap-2 rounded-2xl border bg-background/70 p-2"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-semibold">{student.name || "بدون اسم"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            رقم القيد: {student.id}
-                          </div>
-                        </div>
-                        <Select
-                          value={student.teacher || "unassigned"}
-                          onValueChange={(value) => void moveStudent(student, value)}
-                          disabled={!!viewAs || saving === student.id}
-                        >
-                          <SelectTrigger className="h-9 w-36 rounded-xl text-xs">
-                            <SelectValue placeholder="الحلقة" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="unassigned">بدون حلقة</SelectItem>
-                            {teacherNames.map((name) => (
-                              <SelectItem key={name} value={name}>
-                                {name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={!!viewAs || removing === student.id}
-                          onClick={() => void removeStudentFromYear(student)}
-                          className="h-9 gap-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" /> إخراج
-                        </Button>
-                      </div>
-                    ))
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-separate border-spacing-0 text-sm">
+                        <thead className="bg-gradient-to-l from-primary via-emerald-700 to-teal-800 text-xs text-primary-foreground">
+                          <tr>
+                            <th className="w-10 border-b border-l border-white/15 px-2 py-2.5 text-center font-black">
+                              م
+                            </th>
+                            <th className="border-b border-l border-white/15 px-3 py-2.5 text-right font-bold">
+                              اسم الطالب / الطالبة
+                            </th>
+                            <th className="w-18 border-b border-l border-white/15 px-2 py-2.5 text-center font-bold">
+                              الأجزاء
+                            </th>
+                            <th className="w-18 border-b border-l border-white/15 px-2 py-2.5 text-center font-bold">
+                              المجموع
+                            </th>
+                            <th className="w-36 border-b border-l border-white/15 px-2.5 py-2.5 text-right font-bold">
+                              الحلقة
+                            </th>
+                            <th className="w-20 border-b border-white/15 px-2 py-2.5 text-center font-bold">
+                              إجراء
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teacherStudents.map((student, idx) => (
+                            <tr
+                              key={student.id}
+                              className="odd:bg-card even:bg-secondary/25 hover:bg-primary/[0.06] transition-colors"
+                            >
+                              <td className="border-b border-l border-border/60 px-2 py-2 text-center text-xs font-black text-primary">
+                                {idx + 1}
+                              </td>
+                              <td className="border-b border-l border-border/60 px-3 py-2">
+                                <div className="font-bold text-foreground">
+                                  {student.name || "بدون اسم"}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {student.school_grade ? `${student.school_grade} · ` : ""}
+                                  رقم القيد: {student.id}
+                                </div>
+                              </td>
+                              <td className="border-b border-l border-border/60 bg-amber-500/[0.04] px-2 py-2 text-center text-xs font-extrabold text-amber-800">
+                                {student.yearData?.parts || "0"}
+                              </td>
+                              <td className="border-b border-l border-border/60 bg-emerald-500/[0.04] px-2 py-2 text-center text-xs font-extrabold text-emerald-800">
+                                {student.yearData?.total || "0"}
+                              </td>
+                              <td className="border-b border-l border-border/60 px-2 py-2">
+                                <Select
+                                  value={student.teacher || "unassigned"}
+                                  onValueChange={(value) => void moveStudent(student, value)}
+                                  disabled={!!viewAs || saving === student.id}
+                                >
+                                  <SelectTrigger className="h-8 w-full rounded-xl text-xs">
+                                    <SelectValue placeholder="الحلقة" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned">بدون حلقة</SelectItem>
+                                    {teacherNames.map((name) => (
+                                      <SelectItem key={name} value={name}>
+                                        {name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="border-b border-border/60 px-2 py-2 text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={!!viewAs || removing === student.id}
+                                  onClick={() => void removeStudentFromYear(student)}
+                                  className="h-8 gap-1 rounded-xl px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" /> إخراج
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -477,27 +527,65 @@ const Halaqat = () => {
                 ))}
               </SelectContent>
             </Select>
-            <div className="max-h-72 space-y-1 overflow-y-auto rounded-2xl border bg-muted/30 p-2">
+            <div className="max-h-72 overflow-y-auto rounded-2xl border bg-card">
               {availableStudents.length === 0 ? (
                 <p className="p-5 text-center text-sm text-muted-foreground">
                   لا يوجد طلاب متاحون للربط.
                 </p>
               ) : (
-                availableStudents.map((student) => (
-                  <label
-                    key={student.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-xl p-2 hover:bg-background"
-                  >
-                    <Checkbox
-                      checked={selectedStudents.has(student.id)}
-                      onCheckedChange={() => toggleStudent(student.id)}
-                    />
-                    <span className="font-semibold">{student.name || "بدون اسم"}</span>
-                    <span className="text-xs text-muted-foreground">
-                      — {student.teacher || "بدون معلم/ة"}
-                    </span>
-                  </label>
-                ))
+                <table className="w-full border-separate border-spacing-0 text-sm">
+                  <thead className="sticky top-0 z-10 bg-gradient-to-l from-primary via-emerald-700 to-teal-800 text-xs text-primary-foreground">
+                    <tr>
+                      <th className="w-10 border-b border-l border-white/15 px-2 py-2 text-center">
+                        تحديد
+                      </th>
+                      <th className="w-10 border-b border-l border-white/15 px-2 py-2 text-center font-black">
+                        م
+                      </th>
+                      <th className="border-b border-l border-white/15 px-3 py-2 text-right font-bold">
+                        اسم الطالب / الطالبة
+                      </th>
+                      <th className="border-b border-white/15 px-3 py-2 text-right font-bold">
+                        المعلم/المعلمة
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {availableStudents.map((student, idx) => {
+                      const checked = selectedStudents.has(student.id);
+                      return (
+                        <tr
+                          key={student.id}
+                          onClick={() => toggleStudent(student.id)}
+                          className={`cursor-pointer transition-colors ${
+                            checked
+                              ? "bg-primary/12 hover:bg-primary/16"
+                              : "odd:bg-card even:bg-secondary/25 hover:bg-primary/[0.06]"
+                          }`}
+                        >
+                          <td
+                            className="border-b border-l border-border/60 px-2 py-2 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={() => toggleStudent(student.id)}
+                            />
+                          </td>
+                          <td className="border-b border-l border-border/60 px-2 py-2 text-center text-xs font-black text-primary">
+                            {idx + 1}
+                          </td>
+                          <td className="border-b border-l border-border/60 px-3 py-2 font-bold">
+                            {student.name || "بدون اسم"}
+                          </td>
+                          <td className="border-b border-border/60 px-3 py-2 text-xs text-muted-foreground">
+                            {student.teacher || "بدون معلم/ة"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
             <p className="text-xs text-muted-foreground">المحدد: {selectedStudents.size} طالب</p>

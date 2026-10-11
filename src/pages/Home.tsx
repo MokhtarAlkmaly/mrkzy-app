@@ -137,7 +137,7 @@ const Home = () => {
     {
       to: "/exam-questions",
       label: "أسئلة الاختبارات",
-      desc: "بنك أسئلة الحفظ والتلاوة",
+      desc: "توليد نماذج الاختبار من المصحف وبنك الأسئلة",
       icon: BookOpenCheck,
       color: "from-fuchsia-600 to-pink-700",
     },

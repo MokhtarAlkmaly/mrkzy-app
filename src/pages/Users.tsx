@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -26,9 +27,17 @@ import {
   UserPlus,
   Copy,
   Link as LinkIcon,
+  Trash2,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
-import { listAllUsers, grantAccess, revokeAccess, setUserRole, type AppUser } from "@/utils/users";
+import {
+  listAllUsers,
+  grantAccess,
+  revokeAccess,
+  setUserRole,
+  deleteUsers,
+  type AppUser,
+} from "@/utils/users";
 
 /** قراءة رسالة/رمز الخطأ بأمان دون استعمال any. */
 const errInfo = (error: unknown): { message: string; code: string } => {
@@ -41,7 +50,7 @@ const errInfo = (error: unknown): { message: string; code: string } => {
 
 const Users = () => {
   const { toast } = useToast();
-  const { user, isAdmin, loading: authLoading, refreshAccess } = useAuth();
+  const { user, isAdmin, loading: authLoading, refreshAccess, viewAs, setViewAs } = useAuth();
 
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +60,9 @@ const Users = () => {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -195,6 +207,75 @@ const Users = () => {
     }
   };
 
+  const deletableUsers = useMemo(
+    () => filtered.filter((u) => u.id !== user?.id),
+    [filtered, user?.id],
+  );
+
+  const allDeletableSelected =
+    deletableUsers.length > 0 && deletableUsers.every((u) => selectedIds.has(u.id));
+
+  const toggleSelectUser = (id: string) => {
+    if (id === user?.id) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allDeletableSelected) {
+        deletableUsers.forEach((u) => next.delete(u.id));
+      } else {
+        deletableUsers.forEach((u) => next.add(u.id));
+      }
+      return next;
+    });
+  };
+
+  const openSingleDelete = (target: AppUser) => {
+    if (target.id === user?.id) return;
+    setSelectedIds(new Set([target.id]));
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteUsers = async () => {
+    const ids = Array.from(selectedIds).filter((id) => id !== user?.id);
+    if (ids.length === 0) return;
+    setDeleting(true);
+    try {
+      await deleteUsers(ids);
+      const deletedSet = new Set(ids);
+      setUsers((prev) => prev.filter((u) => !deletedSet.has(u.id)));
+      setSelectedIds(new Set());
+      setDeleteDialogOpen(false);
+      if (viewAs && deletedSet.has(viewAs.id)) {
+        setViewAs(null);
+      }
+      await refreshAccess();
+      toast({
+        title: "تم حذف المستخدمين",
+        description:
+          ids.length === 1
+            ? "تم حذف المستخدم وبياناته نهائياً."
+            : `تم حذف ${ids.length} مستخدمين وبياناتهم نهائياً.`,
+        variant: "destructive",
+      });
+    } catch (error: unknown) {
+      toast({
+        title: "تعذّر حذف المستخدمين",
+        description: errInfo(error).message || "تأكد من تحديث دوال SQL في Supabase وحاول مرة أخرى",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // ===== غير مسؤول =====
   if (!authLoading && !isAdmin) {
     return (
@@ -272,6 +353,15 @@ const Users = () => {
               <UserPlus className="h-4 w-4" /> إضافة مستخدم
             </Button>
             <Button
+              variant="destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+              className="gap-1 rounded-xl"
+              disabled={users.filter((u) => u.id !== user?.id).length === 0}
+            >
+              <Trash2 className="h-4 w-4" />
+              {selectedIds.size > 0 ? `حذف مستخدمين (${selectedIds.size})` : "حذف مستخدمين"}
+            </Button>
+            <Button
               variant="outline"
               onClick={() => void load()}
               className="gap-1 rounded-xl"
@@ -291,6 +381,14 @@ const Users = () => {
             <table className="w-full text-sm">
               <thead className="bg-primary/5">
                 <tr>
+                  <th className="w-10 px-3 py-2 text-center">
+                    <Checkbox
+                      checked={allDeletableSelected}
+                      onCheckedChange={toggleSelectAll}
+                      disabled={deletableUsers.length === 0}
+                      aria-label="تحديد كل المستخدمين"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-right">#</th>
                   <th className="px-3 py-2 text-right">الاسم</th>
                   <th className="px-3 py-2 text-right">البريد الإلكتروني</th>
@@ -306,6 +404,15 @@ const Users = () => {
                   const busy = busyId === u.id;
                   return (
                     <tr key={u.id} className="border-t border-border/60 hover:bg-primary/5">
+                      <td className="px-3 py-2 text-center">
+                        {!isMe && (
+                          <Checkbox
+                            checked={selectedIds.has(u.id)}
+                            onCheckedChange={() => toggleSelectUser(u.id)}
+                            aria-label={`تحديد ${u.display_name || u.email || "مستخدم"}`}
+                          />
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-muted-foreground">{index + 1}</td>
                       <td className="px-3 py-2 font-semibold">
                         <div className="flex items-center gap-2">
@@ -373,6 +480,15 @@ const Users = () => {
                               >
                                 <ShieldCheck className="h-3.5 w-3.5" />
                                 {u.is_admin ? "إلغاء المسؤول" : "ترقية لمسؤول"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                disabled={busy}
+                                onClick={() => openSingleDelete(u)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> حذف
                               </Button>
                             </>
                           )}
@@ -472,6 +588,71 @@ const Users = () => {
               إلغاء
             </Button>
             <Button onClick={() => void applyRoleChange()}>تأكيد</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* تأكيد حذف مستخدمين */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent dir="rtl" className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" /> حذف مستخدمين
+            </DialogTitle>
+            <DialogDescription>
+              اختر المستخدمين المراد حذفهم. سيؤدي الحذف إلى إزالة الحساب وصلاحياته وجميع البيانات
+              المرتبطة به نهائياً دون إمكانية التراجع.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-2xl border bg-secondary/30 p-3">
+            {users.filter((u) => u.id !== user?.id).length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                لا يوجد مستخدمون آخرون لحذفهم.
+              </p>
+            ) : (
+              users
+                .filter((u) => u.id !== user?.id)
+                .map((u) => (
+                  <label
+                    key={u.id}
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-transparent bg-background/80 px-3 py-2 hover:border-destructive/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedIds.has(u.id)}
+                        onCheckedChange={() => toggleSelectUser(u.id)}
+                      />
+                      <div>
+                        <div className="text-sm font-semibold">{u.display_name || "بدون اسم"}</div>
+                        <div className="text-xs text-muted-foreground" dir="ltr">
+                          {u.email || "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{u.students_count} طالب/ة</span>
+                  </label>
+                ))
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting || selectedIds.size === 0}
+              onClick={() => void confirmDeleteUsers()}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleting
+                ? "جارٍ الحذف..."
+                : selectedIds.size > 0
+                  ? `تأكيد حذف (${selectedIds.size})`
+                  : "تأكيد الحذف"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

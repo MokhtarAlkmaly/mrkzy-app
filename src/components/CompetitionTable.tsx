@@ -421,6 +421,35 @@ export const CompetitionTable = ({
     printHtmlDocument(fullHtml, `تقرير_${competitionLabel}_${currentYear}`);
   };
 
+  const filteredStats = useMemo(() => {
+    let totalParts = 0;
+    let totalScores = 0;
+    let scoredCount = 0;
+    let totalPrize = 0;
+    let khatimCount = 0;
+
+    for (const s of filteredStudents) {
+      const p = parseFloat(s.yearData?.parts || "0") || 0;
+      const th = parseFloat(s.yearData?.totalHifz || "0") || 0;
+      const tot = parseFloat(s.yearData?.total || "0") || 0;
+      const prz = parseFloat(s.yearData?.prize || "0") || 0;
+      totalParts += p;
+      totalPrize += prz;
+      if (tot > 0) {
+        totalScores += tot;
+        scoredCount++;
+      }
+      if (th >= 30 || p >= 30) khatimCount++;
+    }
+
+    return {
+      totalParts: Math.round(totalParts * 100) / 100,
+      avgScore: scoredCount > 0 ? (totalScores / scoredCount).toFixed(1) : "0",
+      totalPrize: Math.round(totalPrize),
+      khatimCount,
+    };
+  }, [filteredStudents]);
+
   return (
     <div className="space-y-4">
       <TableFilters
@@ -439,16 +468,26 @@ export const CompetitionTable = ({
         hasFilters={hasFilters}
       />
 
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/70 bg-card/90 shadow-2xl shadow-primary/10 backdrop-blur">
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-background/55 px-4 py-3 print:hidden">
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-card/95 shadow-2xl shadow-primary/10 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-gradient-to-l from-primary/[0.08] via-emerald-500/[0.04] to-transparent px-4 py-3 print:hidden">
           <div>
-            <h3 className="font-black text-foreground">كشف الطلاب والطالبات</h3>
+            <h3 className="font-black text-foreground">
+              كشف الطلاب والطالبات — عام {currentYear}هـ
+            </h3>
             <p className="text-xs text-muted-foreground">
-              اسحب يمين/يسار لرؤية كل الأعمدة على الجوال
+              انقر على رأس العمود للفرز · اسحب يمين/يسار لرؤية جميع الأعمدة
             </p>
           </div>
-          <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-            {filteredStudents.length} طالب/طالبة
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-amber-500/12 px-2.5 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-500/20">
+              مجموع الأجزاء: {filteredStats.totalParts}
+            </span>
+            <span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-500/20">
+              متوسط الدرجات: {filteredStats.avgScore}
+            </span>
+            <span className="rounded-full bg-primary/12 px-3 py-1 text-xs font-extrabold text-primary ring-1 ring-primary/20">
+              {filteredStudents.length} طالب/طالبة
+            </span>
           </div>
         </div>
         <div className="max-h-[72vh] overflow-auto">
@@ -472,6 +511,49 @@ export const CompetitionTable = ({
                 />
               ))}
             </tbody>
+            {filteredStudents.length > 0 && (
+              <tfoot className="sticky bottom-0 z-10 bg-gradient-to-l from-secondary via-secondary/95 to-background font-bold text-foreground shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="border-t-2 border-l border-primary/30 px-4 py-2.5 text-right text-xs"
+                  >
+                    إجمالي الكشف المعروض:{" "}
+                    <span className="font-black text-primary">{filteredStudents.length}</span>{" "}
+                    طالب/طالبة
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-amber-800">
+                    خاتمون: {filteredStats.khatimCount}
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs">
+                    —
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-amber-800">
+                    {filteredStats.totalParts} جزء
+                  </td>
+                  <td
+                    colSpan={5}
+                    className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs text-muted-foreground"
+                  >
+                    متوسط المجموع الكلي
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-emerald-800">
+                    {filteredStats.avgScore}
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs">
+                    —
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-primary">
+                    {filteredStats.totalPrize > 0
+                      ? filteredStats.totalPrize.toLocaleString("ar-EG")
+                      : "—"}
+                  </td>
+                  <td className="border-t-2 border-primary/30 px-2 py-2.5 text-center text-xs">
+                    —
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>

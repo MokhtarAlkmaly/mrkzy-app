@@ -392,7 +392,8 @@ const Index = () => {
     name: string;
     years: string[];
   } | null>(null);
-  const [deleteMode, setDeleteMode] = useState<"all" | "year" | "selected">("year");
+  const [deleteMode, setDeleteMode] = useState<"all" | "year" | "duplicates" | "selected">("year");
+  const [selectedYearToDelete, setSelectedYearToDelete] = useState<string>("1447");
   const [selectedToDelete, setSelectedToDelete] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
 
@@ -409,23 +410,37 @@ const Index = () => {
     setDeleting(true);
     try {
       if (deleteMode === "all") {
-        const { deleteAllStudents } = await import("@/utils/storage");
-        await deleteAllStudents();
+        const { deleteAllData } = await import("@/utils/storage");
+        await deleteAllData();
         setStudents([]);
         setDirtyMap({});
         toast({
-          title: "تم الحذف",
+          title: "تم حذف كل البيانات",
           description: "تم حذف جميع البيانات (كل الأعوام والطلاب والطالبات)",
           variant: "destructive",
         });
       } else if (deleteMode === "year") {
         const { deleteYearData } = await import("@/utils/storage");
-        await deleteYearData(dataYearKey);
+        const targetYearKey =
+          selectedYearToDelete === currentYear ? dataYearKey : selectedYearToDelete;
+        await deleteYearData(targetYearKey);
         setDirtyMap({});
         toast({
-          title: "تم الحذف",
-          description: `تم حذف بيانات ${competitionLabel} لعام ${currentYear}هـ فقط (الطلاب والطالبات نفسهم باقون)`,
+          title: "تم حذف بيانات العام",
+          description: `تم حذف بيانات عام ${selectedYearToDelete}هـ فقط (الطلاب والطالبات أنفسهم باقون)`,
           variant: "destructive",
+        });
+        await loadData();
+      } else if (deleteMode === "duplicates") {
+        const { deleteDuplicateStudents } = await import("@/utils/storage");
+        const removed = await deleteDuplicateStudents();
+        setDirtyMap({});
+        toast({
+          title: removed > 0 ? "تم حذف الأسماء المكررة" : "لا توجد أسماء مكررة",
+          description:
+            removed > 0
+              ? `تم دمج وحذف ${removed} سجل مكرر بنجاح`
+              : "جميع أسماء الطلاب والطالبات غير مكررة",
         });
         await loadData();
       } else {
@@ -797,6 +812,7 @@ const Index = () => {
               <Button
                 onClick={() => {
                   setDeleteMode("year");
+                  setSelectedYearToDelete(currentYear);
                   setSelectedToDelete(new Set());
                   setDeleteDialogOpen(true);
                 }}
@@ -867,14 +883,44 @@ const Index = () => {
             className="space-y-3"
           >
             <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-border p-3 hover:bg-secondary/50">
-              <RadioGroupItem value="year" id="mode-year" className="mt-1" />
+              <RadioGroupItem value="duplicates" id="mode-duplicates" className="mt-1" />
               <div>
-                <div className="font-bold">
-                  حذف بيانات {competitionLabel} لعام {currentYear}هـ فقط
-                </div>
+                <div className="font-bold">حذف مكرر أسماء الطلاب</div>
                 <div className="text-xs text-muted-foreground">
-                  تُحذف الدرجات والحفظ لهذا العام فقط، وتبقى الطلاب والطالبات وباقي الأعوام كما هي
+                  يدمج ويحذف السجلات المكررة بنفس الاسم مع الاحتفاظ ببيانات ودرجات الطالب/ة
                 </div>
+              </div>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-border p-3 hover:bg-secondary/50">
+              <RadioGroupItem value="year" id="mode-year" className="mt-1" />
+              <div className="w-full space-y-2">
+                <div>
+                  <div className="font-bold">حذف بيانات عام ({selectedYearToDelete}هـ)</div>
+                  <div className="text-xs text-muted-foreground">
+                    تُحذف الدرجات والحفظ للعام المحدد فقط، وتبقى الطلاب والطالبات وباقي الأعوام كما
+                    هي
+                  </div>
+                </div>
+                {deleteMode === "year" && (
+                  <div className="pt-1">
+                    <Select value={selectedYearToDelete} onValueChange={setSelectedYearToDelete}>
+                      <SelectTrigger className="h-9 w-36 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(
+                          { length: END_YEAR - START_YEAR + 1 },
+                          (_, i) => START_YEAR + i,
+                        ).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}هـ
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </label>
 
@@ -886,27 +932,71 @@ const Index = () => {
                   تُحذف الطلاب والطالبات المختارين بكل بياناتهم من كل الأعوام
                 </div>
                 {deleteMode === "selected" && (
-                  <div className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-lg bg-secondary/40 p-2">
+                  <div className="mt-2 max-h-56 overflow-y-auto rounded-xl border bg-card">
                     {students.length === 0 ? (
-                      <p className="p-2 text-xs text-muted-foreground">
+                      <p className="p-3 text-center text-xs text-muted-foreground">
                         لا توجد طلاب وطالبات بهذا العام
                       </p>
                     ) : (
-                      students.map((s) => (
-                        <label
-                          key={s.id}
-                          className="flex cursor-pointer items-center gap-2 rounded-lg p-1.5 hover:bg-background"
-                        >
-                          <Checkbox
-                            checked={selectedToDelete.has(s.id)}
-                            onCheckedChange={() => toggleSelectedToDelete(s.id)}
-                          />
-                          <span className="text-sm">
-                            {s.name || "بدون اسم"}{" "}
-                            <span className="text-xs text-muted-foreground">— {s.teacher}</span>
-                          </span>
-                        </label>
-                      ))
+                      <table className="w-full border-separate border-spacing-0 text-xs">
+                        <thead className="sticky top-0 z-10 bg-gradient-to-l from-primary via-emerald-700 to-teal-800 text-primary-foreground">
+                          <tr>
+                            <th className="w-8 border-b border-l border-white/15 px-2 py-2 text-center">
+                              ✓
+                            </th>
+                            <th className="w-8 border-b border-l border-white/15 px-2 py-2 text-center font-black">
+                              م
+                            </th>
+                            <th className="border-b border-l border-white/15 px-2.5 py-2 text-right font-bold">
+                              اسم الطالب/الطالبة
+                            </th>
+                            <th className="border-b border-l border-white/15 px-2.5 py-2 text-right font-bold">
+                              المعلم/ة
+                            </th>
+                            <th className="w-16 border-b border-white/15 px-2 py-2 text-center font-bold">
+                              الأجزاء
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map((s, idx) => {
+                            const checked = selectedToDelete.has(s.id);
+                            return (
+                              <tr
+                                key={s.id}
+                                onClick={() => toggleSelectedToDelete(s.id)}
+                                className={`cursor-pointer transition-colors ${
+                                  checked
+                                    ? "bg-destructive/10 hover:bg-destructive/15"
+                                    : "odd:bg-card even:bg-secondary/25 hover:bg-primary/[0.06]"
+                                }`}
+                              >
+                                <td
+                                  className="border-b border-l border-border/60 px-2 py-1.5 text-center"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={() => toggleSelectedToDelete(s.id)}
+                                  />
+                                </td>
+                                <td className="border-b border-l border-border/60 px-2 py-1.5 text-center font-black text-primary">
+                                  {idx + 1}
+                                </td>
+                                <td className="border-b border-l border-border/60 px-2.5 py-1.5 font-bold">
+                                  {s.name || "بدون اسم"}
+                                </td>
+                                <td className="border-b border-l border-border/60 px-2.5 py-1.5 text-muted-foreground">
+                                  {s.teacher || "—"}
+                                </td>
+                                <td className="border-b border-border/60 px-2 py-1.5 text-center font-bold text-amber-800">
+                                  {s.yearData?.parts || "0"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     )}
                   </div>
                 )}

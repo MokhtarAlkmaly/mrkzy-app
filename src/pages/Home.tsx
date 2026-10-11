@@ -25,7 +25,7 @@ import logo from "@/assets/logo.png";
 import { getActiveYear, loadGlobalStudents, loadTeachers } from "@/utils/storage";
 
 const Home = () => {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   const [year, setYear] = useState("");
   const [studentsCount, setStudentsCount] = useState<number | null>(null);
   const [teachersCount, setTeachersCount] = useState<number | null>(null);
@@ -216,6 +216,13 @@ const Home = () => {
                 <SettingsIcon className="h-4 w-4" /> الإعدادات
               </Button>
             </Link>
+            {isAdmin && (
+              <Link to="/users">
+                <Button variant="outline" className="gap-1">
+                  <Users className="h-4 w-4" /> إدارة المستخدمين
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>

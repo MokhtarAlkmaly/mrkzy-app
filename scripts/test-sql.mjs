@@ -835,6 +835,32 @@ async function main() {
   const rootSeesAll = await asUser(USER_ROOT, () => q("SELECT id FROM public.students"));
   ok(rootSeesAll.length === 4, "المسؤول يقرأ بيانات كل المستخدمين (4 طلاب)");
 
+  // اختبار حذف المستخدمين عبر admin_delete_user
+  const USER_TEMP = "dddddddd-0000-0000-0000-000000000004";
+  await db.query("INSERT INTO auth.users (id, email) VALUES ($1, 'temp@test.dev')", [USER_TEMP]);
+  await db.query("INSERT INTO public.students (user_id, name) VALUES ($1, 'طالب مؤقت')", [
+    USER_TEMP,
+  ]);
+  await throws(
+    () => asUser(USER_A, () => db.query("SELECT public.admin_delete_user($1)", [USER_TEMP])),
+    "admin_delete_user مرفوضة لغير المسؤول",
+    "للمسؤول فقط",
+  );
+  await throws(
+    () => asUser(USER_ROOT, () => db.query("SELECT public.admin_delete_user($1)", [USER_ROOT])),
+    "لا يستطيع المسؤول حذف حسابه هو",
+    "حسابك أنت",
+  );
+  await asUser(USER_ROOT, () => db.query("SELECT public.admin_delete_user($1)", [USER_TEMP]));
+  const tempAfter = await q("SELECT id FROM public.profiles WHERE id = $1", [USER_TEMP]);
+  const tempStudentsAfter = await q("SELECT id FROM public.students WHERE user_id = $1", [
+    USER_TEMP,
+  ]);
+  ok(
+    tempAfter.length === 0 && tempStudentsAfter.length === 0,
+    "المسؤول يستطيع حذف مستخدم وكل بياناته",
+  );
+
   // ---------- مشاركة القراءة («عرض باسم») ----------
   console.log("\nمشاركة القراءة بين المستخدمين:");
 
@@ -1158,8 +1184,8 @@ async function main() {
         JOIN pg_namespace n ON n.oid = p.pronamespace
        WHERE n.nspname = 'public'
          AND p.proname IN ('open_teacher_portal', 'submit_teacher_monthly',
-                           'admin_list_users', 'admin_set_role', 'is_admin',
-                           'can_read_user_data', 'is_admin_email', 'has_role',
+                           'admin_list_users', 'admin_set_role', 'admin_delete_user',
+                           'is_admin', 'can_read_user_data', 'is_admin_email', 'has_role',
                            'admin_email', 'handle_new_user',
                            'update_updated_at_column')`,
     )

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -8,6 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@/lib/router-compat";
@@ -22,6 +31,8 @@ import {
   CheckCircle2,
   UserCog,
   Eye,
+  AlertTriangle,
+  Users as UsersIcon,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { CustomColumnDef, DEFAULT_STATUSES, START_YEAR, END_YEAR } from "@/types/student";
@@ -32,8 +43,17 @@ import {
   saveCustomColumns,
   loadStudentStatuses,
   saveStudentStatuses,
+  deleteDuplicateStudents,
+  deleteYearData,
+  deleteAllData,
 } from "@/utils/storage";
-import { getMyProfile, updateMyDisplayName } from "@/utils/users";
+import {
+  getMyProfile,
+  updateMyDisplayName,
+  listAllUsers,
+  deleteUsers,
+  type AppUser,
+} from "@/utils/users";
 import { supabase } from "@/integrations/supabase/client";
 
 const columnTypeLabels: Record<NonNullable<CustomColumnDef["type"]>, string> = {
@@ -49,7 +69,7 @@ const newColumnId = () =>
     : `col_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
 const Settings = () => {
-  const { user, viewAs, refreshAccess } = useAuth();
+  const { user, isAdmin, viewAs, setViewAs, refreshAccess } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,6 +90,21 @@ const Settings = () => {
   const [newColumnName, setNewColumnName] = useState("");
   const [newColumnType, setNewColumnType] = useState<NonNullable<CustomColumnDef["type"]>>("text");
 
+  // حالات حذف البيانات والمستخدمين
+  const [dedupDialogOpen, setDedupDialogOpen] = useState(false);
+  const [deduping, setDeduping] = useState(false);
+  const [deleteYearDialogOpen, setDeleteYearDialogOpen] = useState(false);
+  const [yearToDelete, setYearToDelete] = useState("");
+  const [deleteOrphanStudents, setDeleteOrphanStudents] = useState(false);
+  const [deletingYear, setDeletingYear] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [deleteUsersDialogOpen, setDeleteUsersDialogOpen] = useState(false);
+  const [appUsers, setAppUsers] = useState<AppUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [deletingUsers, setDeletingUsers] = useState(false);
+
   // أثناء الاطلاع على بيانات مستخدم آخر كل التعديلات معطّلة (قراءة فقط).
   const readOnly = !!viewAs;
 
@@ -78,6 +113,7 @@ const Settings = () => {
     setLoading(true);
     const year = await getActiveYear();
     setActiveYearState(year);
+    setYearToDelete(year);
     const [settings, loadedStatuses, loadedColumns, profile] = await Promise.all([
       supabase
         .from("user_settings")
@@ -215,6 +251,126 @@ const Settings = () => {
       columns.filter((c) => c.id !== id),
       "تم حذف العمود",
     );
+  };
+
+  // ===== عمليات الحذف =====
+  const handleDeleteDuplicates = async () => {
+    if (readOnly) return;
+    setDeduping(true);
+    try {
+      const removed = await deleteDuplicateStudents();
+      setDedupDialogOpen(false);
+      toast({
+        title: removed > 0 ? "تم حذف الأسماء المكررة" : "لا توجد أسماء مكررة",
+        description:
+          removed > 0
+            ? `تم دمج وحذف ${removed} سجل مكرر مع الاحتفاظ ببيانات ودرجات الطالب/ة.`
+            : "جميع أسماء الطلاب والطالبات في السجل غير مكررة.",
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "خطأ غير متوقع";
+      toast({ title: "تعذّر حذف الأسماء المكررة", description: msg, variant: "destructive" });
+    } finally {
+      setDeduping(false);
+    }
+  };
+
+  const handleConfirmDeleteYear = async () => {
+    if (readOnly || !yearToDelete) return;
+    setDeletingYear(true);
+    try {
+      await deleteYearData(yearToDelete, {
+        includeAllYearTables: true,
+        deleteOrphanStudents,
+      });
+      setDeleteYearDialogOpen(false);
+      toast({
+        title: `تم حذف بيانات عام ${yearToDelete}هـ`,
+        description: deleteOrphanStudents
+          ? `تم حذف جميع بيانات عام ${yearToDelete}هـ مع الطلاب المسجلين في هذا العام فقط.`
+          : `تم حذف بيانات عام ${yearToDelete}هـ مع بقاء أسماء الطلاب في السجل العام.`,
+        variant: "destructive",
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "خطأ غير متوقع";
+      toast({ title: "تعذّر حذف بيانات العام", description: msg, variant: "destructive" });
+    } finally {
+      setDeletingYear(false);
+    }
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    if (readOnly) return;
+    setDeletingAll(true);
+    try {
+      await deleteAllData();
+      setDeleteAllDialogOpen(false);
+      toast({
+        title: "تم حذف كل البيانات",
+        description: "تم مسح جميع الطلاب والطالبات وبيانات كافة الأعوام نهائياً.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "خطأ غير متوقع";
+      toast({ title: "تعذّر حذف كل البيانات", description: msg, variant: "destructive" });
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
+  const openDeleteUsersDialog = async () => {
+    if (!isAdmin) return;
+    setSelectedUserIds(new Set());
+    setDeleteUsersDialogOpen(true);
+    setLoadingUsers(true);
+    try {
+      setAppUsers(await listAllUsers());
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "تعذّر جلب المستخدمين";
+      toast({ title: "تعذّر تحميل المستخدمين", description: msg, variant: "destructive" });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const toggleSelectUser = (id: string) => {
+    if (id === user?.id) return;
+    setSelectedUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleConfirmDeleteUsers = async () => {
+    const ids = Array.from(selectedUserIds).filter((id) => id !== user?.id);
+    if (ids.length === 0) return;
+    setDeletingUsers(true);
+    try {
+      await deleteUsers(ids);
+      const deletedSet = new Set(ids);
+      setAppUsers((prev) => prev.filter((u) => !deletedSet.has(u.id)));
+      setSelectedUserIds(new Set());
+      setDeleteUsersDialogOpen(false);
+      if (viewAs && deletedSet.has(viewAs.id)) {
+        setViewAs(null);
+      }
+      await refreshAccess();
+      toast({
+        title: "تم حذف المستخدمين",
+        description:
+          ids.length === 1
+            ? "تم حذف المستخدم وبياناته نهائياً."
+            : `تم حذف ${ids.length} مستخدمين وبياناتهم نهائياً.`,
+        variant: "destructive",
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "خطأ غير متوقع";
+      toast({ title: "تعذّر حذف المستخدمين", description: msg, variant: "destructive" });
+    } finally {
+      setDeletingUsers(false);
+    }
   };
 
   return (
@@ -513,9 +669,319 @@ const Settings = () => {
                 </div>
               )}
             </div>
+
+            {/* ===== إدارة وحذف البيانات والمستخدمين ===== */}
+            <div className="space-y-4 rounded-[1.5rem] border border-destructive/30 bg-card/90 p-5 shadow-xl shadow-destructive/5">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <div>
+                  <p className="text-base font-semibold text-destructive">
+                    إدارة وحذف البيانات والمستخدمين
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    حذف مكرر أسماء الطلاب، حذف بيانات عام محدد، حذف كل البيانات، أو حذف مستخدمين.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {/* 1. حذف مكرر أسماء الطلاب */}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/70 p-3">
+                  <div>
+                    <div className="text-sm font-semibold">حذف مكرر أسماء الطلاب</div>
+                    <div className="text-xs text-muted-foreground">
+                      يدمج ويحذف السجلات المتكررة بالاسم مع الاحتفاظ بدرجات وسجل الطالب الأصلي.
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={readOnly || deduping}
+                    onClick={() => setDedupDialogOpen(true)}
+                    className="gap-1.5 border-amber-400 text-amber-800 hover:bg-amber-50"
+                  >
+                    <Trash2 className="h-4 w-4" /> حذف مكرر أسماء الطلاب
+                  </Button>
+                </div>
+
+                {/* 2. حذف بيانات عام */}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/70 p-3">
+                  <div>
+                    <div className="text-sm font-semibold">حذف بيانات عام</div>
+                    <div className="text-xs text-muted-foreground">
+                      يحذف جميع بيانات عام هجري محدد دون المساس ببقية الأعوام.
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={yearToDelete}
+                      onValueChange={setYearToDelete}
+                      disabled={readOnly}
+                    >
+                      <SelectTrigger className="h-9 w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(
+                          { length: END_YEAR - START_YEAR + 1 },
+                          (_, i) => START_YEAR + i,
+                        ).map((y) => (
+                          <SelectItem key={y} value={String(y)}>
+                            {y}هـ
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={readOnly}
+                      onClick={() => setDeleteYearDialogOpen(true)}
+                      className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" /> حذف بيانات عام
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 3. حذف كل البيانات */}
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 p-3">
+                  <div>
+                    <div className="text-sm font-semibold text-destructive">حذف كل البيانات</div>
+                    <div className="text-xs text-muted-foreground">
+                      يحذف كافة الطلاب والطالبات وبيانات جميع الأعوام والمتابعات نهائياً.
+                    </div>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={readOnly}
+                    onClick={() => setDeleteAllDialogOpen(true)}
+                    className="gap-1.5"
+                  >
+                    <Trash2 className="h-4 w-4" /> حذف كل البيانات
+                  </Button>
+                </div>
+
+                {/* 4. حذف مستخدمين (للمسؤول) */}
+                {isAdmin && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/70 p-3">
+                    <div>
+                      <div className="text-sm font-semibold">حذف مستخدمين</div>
+                      <div className="text-xs text-muted-foreground">
+                        حذف حسابات مستخدمين وبياناتهم أو الانتقال لصفحة إدارة المستخدمين.
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link to="/users">
+                        <Button variant="outline" size="sm" className="gap-1.5">
+                          <UsersIcon className="h-4 w-4" /> إدارة المستخدمين
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => void openDeleteUsersDialog()}
+                        className="gap-1.5"
+                      >
+                        <Trash2 className="h-4 w-4" /> حذف مستخدمين
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
+
+      {/* تأكيد حذف مكرر أسماء الطلاب */}
+      <Dialog open={dedupDialogOpen} onOpenChange={setDedupDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-amber-600" /> حذف مكرر أسماء الطلاب
+            </DialogTitle>
+            <DialogDescription>
+              سيتم فحص السجل ودمج وحذف جميع السجلات المكررة بنفس الاسم (بعد توحيد الهمزات والتاء
+              المربوطة والياء والتشكيل) مع الاحتفاظ بسجل واحد لكل طالب/ة وبياناته كاملة.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDedupDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              onClick={() => void handleDeleteDuplicates()}
+              disabled={deduping}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deduping ? "جارٍ حذف المكرر..." : "تأكيد حذف المكرر"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* تأكيد حذف بيانات عام */}
+      <Dialog open={deleteYearDialogOpen} onOpenChange={setDeleteYearDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" /> حذف بيانات عام {yearToDelete}هـ
+            </DialogTitle>
+            <DialogDescription>
+              سيتم حذف جميع بيانات عام {yearToDelete}هـ (الدرجات، الحفظ، المتابعة الشهرية، الحلقات،
+              المعلمين، الجوائز، الشهادات، الداعمين، المصروفات، والمسابقات).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold">العام الهجري المراد حذف بياناته</label>
+              <Select value={yearToDelete} onValueChange={setYearToDelete}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i).map(
+                    (y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        {y}هـ
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <label className="flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm hover:bg-secondary/40">
+              <Checkbox
+                checked={deleteOrphanStudents}
+                onCheckedChange={(v) => setDeleteOrphanStudents(v === true)}
+                className="mt-0.5"
+              />
+              <div>
+                <div className="font-semibold">
+                  حذف الطلاب المسجلين في عام {yearToDelete}هـ فقط من السجل العام أيضاً
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  إذا لم تحدد هذا الخيار، تُحذف درجات وبيانات عام {yearToDelete}هـ فقط وتبقى أسماء
+                  الطلاب في السجل العام.
+                </div>
+              </div>
+            </label>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteYearDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleConfirmDeleteYear()}
+              disabled={deletingYear || !yearToDelete}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletingYear ? "جارٍ الحذف..." : `تأكيد حذف بيانات عام ${yearToDelete}هـ`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* تأكيد حذف كل البيانات */}
+      <Dialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" /> حذف كل البيانات نهائياً
+            </DialogTitle>
+            <DialogDescription>
+              سيتم حذف جميع الطلاب والطالبات وبيانات كافة الأعوام والمتابعات الشهرية والمعلمين
+              والحلقات والجوائز والشهادات والمصروفات نهائياً من السحابة وهذا الجهاز. هذا الإجراء لا
+              يمكن التراجع عنه.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteAllDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleConfirmDeleteAll()}
+              disabled={deletingAll}
+              className="gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletingAll ? "جارٍ الحذف..." : "تأكيد حذف كل البيانات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة حذف مستخدمين (للمسؤول) */}
+      <Dialog open={deleteUsersDialogOpen} onOpenChange={setDeleteUsersDialogOpen}>
+        <DialogContent dir="rtl" className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" /> حذف مستخدمين
+            </DialogTitle>
+            <DialogDescription>
+              اختر المستخدمين المراد حذفهم. سيتم حذف حساباتهم وصلاحياتهم وكافة بياناتهم نهائياً.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-2xl border bg-secondary/30 p-3">
+            {loadingUsers ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                جارٍ تحميل المستخدمين...
+              </p>
+            ) : appUsers.filter((u) => u.id !== user?.id).length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                لا يوجد مستخدمون آخرون لحذفهم.
+              </p>
+            ) : (
+              appUsers
+                .filter((u) => u.id !== user?.id)
+                .map((u) => (
+                  <label
+                    key={u.id}
+                    className="flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-transparent bg-background/80 px-3 py-2 hover:border-destructive/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedUserIds.has(u.id)}
+                        onCheckedChange={() => toggleSelectUser(u.id)}
+                      />
+                      <div>
+                        <div className="text-sm font-semibold">{u.display_name || "بدون اسم"}</div>
+                        <div className="text-xs text-muted-foreground" dir="ltr">
+                          {u.email || "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{u.students_count} طالب/ة</span>
+                  </label>
+                ))
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteUsersDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deletingUsers || selectedUserIds.size === 0}
+              onClick={() => void handleConfirmDeleteUsers()}
+              className="gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletingUsers
+                ? "جارٍ الحذف..."
+                : selectedUserIds.size > 0
+                  ? `تأكيد حذف (${selectedUserIds.size})`
+                  : "تأكيد الحذف"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

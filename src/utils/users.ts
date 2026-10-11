@@ -120,6 +120,41 @@ export const setUserRole = async (userId: string, makeAdmin: boolean): Promise<v
   if (error) throw error;
 };
 
+/** حذف مستخدم وكل بياناته وصلاحياته — للمسؤول فقط. */
+export const deleteUser = async (userId: string): Promise<void> => {
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id;
+  if (!me) throw new Error("لا توجد جلسة مستخدم");
+  if (me === userId) throw new Error("لا يمكنك حذف حسابك أنت");
+
+  const { error } = await db.rpc("admin_delete_user", { _user_id: userId });
+  if (!error) return;
+
+  const errObj = (error ?? {}) as { code?: unknown; message?: unknown };
+  const code = typeof errObj.code === "string" ? errObj.code : "";
+  const message = typeof errObj.message === "string" ? errObj.message : "";
+  const isMissingFn =
+    code === "PGRST202" || code === "42883" || message.includes("admin_delete_user");
+  if (!isMissingFn) throw error;
+
+  await db.from("data_access_grants").delete().eq("owner_id", userId);
+  await db.from("data_access_grants").delete().eq("grantee_id", userId);
+  await db.from("user_roles").delete().eq("user_id", userId);
+  const { error: profileErr } = await db.from("profiles").delete().eq("id", userId);
+  if (profileErr) throw profileErr;
+};
+
+/** حذف عدة مستخدمين دفعة واحدة — للمسؤول فقط. */
+export const deleteUsers = async (userIds: string[]): Promise<number> => {
+  const unique = Array.from(new Set(userIds)).filter(Boolean);
+  let count = 0;
+  for (const id of unique) {
+    await deleteUser(id);
+    count++;
+  }
+  return count;
+};
+
 /**
  * الحسابات التي منحت المستخدم الحالي إذن الاطلاع على بياناتها.
  * تُستعمل لعرض زر "الاطلاع على بيانات المسؤول".

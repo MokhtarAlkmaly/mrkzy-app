@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@/lib/router-compat";
-import { Users, BookMarked, ArrowLeftRight, LogOut } from "lucide-react";
+import { Users, BookMarked, ArrowLeftRight, Database } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
 
 const TrainingHome = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [traineesCount, setTraineesCount] = useState<number | null>(null);
   const [activeCoursesCount, setActiveCoursesCount] = useState<number | null>(null);
 
@@ -61,14 +61,11 @@ const TrainingHome = () => {
                   <ArrowLeftRight className="h-4 w-4" /> تبديل القسم
                 </Button>
               </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white gap-1"
-                onClick={() => void signOut()}
-              >
-                <LogOut className="h-4 w-4" /> خروج
-              </Button>
+              <Link to="/database">
+                <Button variant="ghost" size="sm" className="text-white gap-1">
+                  <Database className="h-4 w-4" /> قاعدة البيانات
+                </Button>
+              </Link>
             </div>
           </div>
           <div className="text-center">

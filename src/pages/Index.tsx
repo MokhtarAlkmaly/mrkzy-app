@@ -18,11 +18,11 @@ import {
   Printer,
   Trash2,
   Calendar,
-  LogOut,
   Save,
   Camera,
-  Wifi,
   WifiOff,
+  HardDrive,
+  Database as DatabaseIcon,
   RefreshCw,
   Users,
   Award,
@@ -54,9 +54,9 @@ import {
   loadTeachers as loadCachedTeachers,
   registerStudentInYear,
 } from "@/utils/storage";
-import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useDbStatus } from "@/offline/useDbStatus";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -98,11 +98,11 @@ const Index = () => {
     total: number;
     label?: string;
   } | null>(null);
-  const [online, setOnline] = useState(navigator.onLine);
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
   const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const dbStatus = useDbStatus();
 
   const isDirty = Object.keys(dirtyMap).length > 0;
 
@@ -154,50 +154,6 @@ const Index = () => {
     };
   }, [loadTeachers]);
 
-  // Auto-sync queued offline changes
-  const autoSyncPending = useCallback(async () => {
-    if (!navigator.onLine || !user) return;
-    try {
-      const pending = await getPendingChanges();
-      if (pending.length === 0) return;
-      setSyncProgress({ current: 0, total: pending.length + 1, label: "مزامنة العمليات المعلقة" });
-      const ok = await syncToCloud((current, total, label) =>
-        setSyncProgress({ current, total, label }),
-      );
-      setSyncProgress(null);
-      if (ok) {
-        toast({
-          title: "تمت المزامنة",
-          description: `تم رفع ${pending.length} عملية معلقة إلى السحابة`,
-        });
-        await loadData();
-      }
-    } catch (e) {
-      setSyncProgress(null);
-      console.error("Auto-sync error:", e);
-    }
-  }, [user, loadData, toast]);
-
-  // Track online/offline + auto-sync triggers
-  // (خفّفنا هنا: كانت المزامنة تحصل عند كل عودة للتطبيق وكل 60 ثانية،
-  // وهذا كان يُثقل التصفح خصوصاً بشبكة ضعيفة. الآن: فقط عند فتح التطبيق
-  // أول مرة، وعند عودة الاتصال بعد انقطاعه — وباقي الوقت المزامنة تصير
-  // يدوياً (زر مزامنة) أو تلقائياً عند محاولة الخروج من التطبيق.)
-  useEffect(() => {
-    const goOnline = () => {
-      setOnline(true);
-      void autoSyncPending();
-    };
-    const goOffline = () => setOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    void autoSyncPending();
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, [autoSyncPending]);
-
   useEffect(() => {
     const init = async () => {
       const year = await getActiveYear();
@@ -205,7 +161,7 @@ const Index = () => {
       // Auto-remove duplicate students silently on startup
       try {
         const merged = await mergeDuplicateStudents();
-        if (merged > 0 && navigator.onLine) {
+        if (merged > 0) {
           await syncToCloud();
         }
       } catch (e) {
@@ -296,8 +252,8 @@ const Index = () => {
 
       setDirtyMap({});
 
-      // Sync to cloud with progress
-      setSyncProgress({ current: 0, total: 1, label: "بدء الرفع" });
+      // كتابة التعديلات في مجلد قاعدة البيانات فوراً
+      setSyncProgress({ current: 0, total: 1, label: "الحفظ في المجلد" });
       const synced = await syncToCloud((current, total, label) =>
         setSyncProgress({ current, total, label }),
       );
@@ -308,8 +264,8 @@ const Index = () => {
       toast({
         title: "تم الحفظ",
         description: synced
-          ? `تم حفظ ومزامنة بيانات ${entries.length} طالب/طالبة بنجاح`
-          : `تم الحفظ محلياً (${entries.length} طالب/طالبة) - سيتم المزامنة عند الاتصال بالإنترنت`,
+          ? `تم حفظ بيانات ${entries.length} طالب/طالبة في مجلد قاعدة البيانات`
+          : `تعذّر الكتابة في المجلد الآن (${entries.length} طالب/طالبة) — البيانات محفوظة مؤقتاً وستُعاد محاولة الحفظ تلقائياً`,
       });
     } catch (error) {
       console.error("Save error:", error);
@@ -469,26 +425,19 @@ const Index = () => {
     printCurrentPage(`كشف_${competitionLabel}_${currentYear}`);
   };
 
+  // إعادة قراءة البيانات من مجلد قاعدة البيانات (مثلاً بعد نسخ المجلد من جهاز آخر)
   const handleSyncFromCloud = async () => {
-    if (!online) {
-      toast({
-        title: "لا يوجد اتصال",
-        description: "يرجى الاتصال بالإنترنت أولاً",
-        variant: "destructive",
-      });
-      return;
-    }
     setSyncing(true);
-    setSyncProgress({ current: 0, total: 4, label: "بدء التنزيل" });
+    setSyncProgress({ current: 0, total: 2, label: "قراءة المجلد" });
     const success = await syncFromCloud((current, total, label) =>
       setSyncProgress({ current, total, label }),
     );
     setSyncProgress(null);
     if (success) {
       await loadData();
-      toast({ title: "تمت المزامنة", description: "تم تحديث البيانات من السحابة" });
+      toast({ title: "تم التحديث", description: "أُعيدت قراءة البيانات من مجلد قاعدة البيانات" });
     } else {
-      toast({ title: "خطأ", description: "فشل في المزامنة", variant: "destructive" });
+      toast({ title: "خطأ", description: "تعذّرت القراءة من المجلد", variant: "destructive" });
     }
     setSyncing(false);
   };
@@ -585,23 +534,29 @@ const Index = () => {
               <div className="flex items-center justify-between gap-4">
                 <span className="font-semibold">{dayName}</span>
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${online ? "bg-emerald-300/20 text-emerald-50" : "bg-red-300/20 text-red-50"}`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${dbStatus.lastError ? "bg-red-300/20 text-red-50" : "bg-emerald-300/20 text-emerald-50"}`}
+                  title={dbStatus.folderLabel}
                 >
-                  {online ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-                  {online ? "متصل" : "غير متصل"}
+                  {dbStatus.lastError ? (
+                    <WifiOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <HardDrive className="h-3.5 w-3.5" />
+                  )}
+                  {dbStatus.lastError ? "تعذّر الحفظ" : "بدون إنترنت"}
                 </span>
               </div>
               <div>{hijriDate}</div>
               <div>{currentDate}</div>
-              <Button
-                onClick={signOut}
-                variant="ghost"
-                size="sm"
-                className="mt-1 justify-center gap-1 rounded-full text-white/80 hover:bg-white/10 hover:text-white print:hidden"
-              >
-                <LogOut className="h-3 w-3" />
-                خروج
-              </Button>
+              <Link to="/database" className="print:hidden">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-1 w-full justify-center gap-1 rounded-full text-white/80 hover:bg-white/10 hover:text-white"
+                >
+                  <DatabaseIcon className="h-3 w-3" />
+                  قاعدة البيانات
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -801,12 +756,12 @@ const Index = () => {
 
               <Button
                 onClick={handleSyncFromCloud}
-                disabled={syncing || !online}
+                disabled={syncing}
                 variant="outline"
                 className="h-12 gap-2 rounded-2xl lg:col-span-2"
               >
                 <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                {syncProgress ? `${syncProgress.current}/${syncProgress.total}` : "مزامنة"}
+                {syncProgress ? `${syncProgress.current}/${syncProgress.total}` : "تحديث من المجلد"}
               </Button>
 
               <Button

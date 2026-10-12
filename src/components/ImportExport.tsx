@@ -194,12 +194,11 @@ export const ImportExport = ({ onDataImported, currentYear, displayYear }: Props
 
         onDataImported();
         try {
-          if (navigator.onLine) {
-            setImportProgress({ current: jsonData.length, total: jsonData.length });
-            await syncToCloud();
-          }
+          // كتابة كل ما استُورد في مجلد قاعدة البيانات فوراً
+          setImportProgress({ current: jsonData.length, total: jsonData.length });
+          await syncToCloud();
         } catch (e) {
-          console.error("Cloud sync after import failed:", e);
+          console.error("Saving to the database folder after import failed:", e);
         }
         toast({
           title: `تم الاستيراد لعام ${labelYear}هـ`,

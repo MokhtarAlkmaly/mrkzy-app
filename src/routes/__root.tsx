@@ -116,10 +116,6 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body>
         {children}
-        {/* ملاحظة أداء: عنصر <jeep-sqlite> لم يعد يُزرع هنا. كان وجوده يعني تحميل
-            محرك SQLite/WASM (~1 ميجابايت) على كل صفحة بما فيها صفحة تسجيل الدخول
-            وبوابة المعلم/ة العامة. صار sqliteClient هو من يُنشئه عند أول استخدام
-            فعلي للقاعدة — انظر useLocalDatabase. */}
         <Scripts />
       </body>
     </html>
@@ -129,8 +125,8 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  // تهيئة قاعدة البيانات المحلية انتقلت إلى المسارات التي تحتاجها فعلاً
-  // (src/hooks/useLocalDatabase.ts) حتى لا تُحمَّل على الصفحات العامة.
+  // قاعدة بيانات المجلد تُفتح في beforeLoad للمسارات التي تحتاجها
+  // (src/offline/routeGuard.ts) — وإلا تظهر شاشة اختيار المجلد (/setup).
 
   return (
     <QueryClientProvider client={queryClient}>

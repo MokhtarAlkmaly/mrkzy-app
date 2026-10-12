@@ -10,9 +10,8 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "@/lib/router-compat";
-import { useAuth } from "@/hooks/useAuth";
+import { DbStatusIndicator } from "@/components/DbStatusIndicator";
 import {
   Trophy,
   GraduationCap,
@@ -34,9 +33,7 @@ import {
   ArrowLeftRight,
   Link2,
   Inbox,
-  UserCog,
-  Eye,
-  EyeOff,
+  Database,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -78,11 +75,7 @@ const otherItems: NavItem[] = [
 const systemItems: NavItem[] = [
   { to: "/management", label: "الإدارة", icon: LayoutDashboard },
   { to: "/settings", label: "الإعدادات", icon: SettingsIcon },
-];
-
-/** تظهر للمسؤول فقط */
-const adminItems: NavItem[] = [
-  { to: "/users", label: "إدارة المستخدمين", icon: UserCog, badge: "المسؤول" },
+  { to: "/database", label: "قاعدة البيانات", icon: Database, badge: "بدون إنترنت" },
 ];
 
 const switchItems: NavItem[] = [{ to: "/", label: "تبديل القسم", icon: ArrowLeftRight }];
@@ -123,72 +116,9 @@ const NavGroup = ({
   );
 };
 
-/**
- * مبدّل «الاطلاع على بيانات مستخدم آخر» (عرض باسم).
- *
- * يظهر فقط لمن مُنح إذن الاطلاع من صاحب بيانات، أو لمن هو في وضع الاطلاع
- * فعلاً. الدخول/الخروج يعيد تحميل الصفحة لتفريغ بيانات المالك السابق من
- * الذاكرة والكاش المحلي.
- */
-const ViewAsSwitcher = () => {
-  const { sharedWithMe, viewAs, setViewAs } = useAuth();
-
-  if (!viewAs && sharedWithMe.length === 0) return null;
-
-  const enter = (ownerId: string, name: string, email: string | null) => {
-    setViewAs({ id: ownerId, name, email });
-    if (typeof window !== "undefined") window.location.reload();
-  };
-
-  const exit = () => {
-    setViewAs(null);
-    if (typeof window !== "undefined") window.location.reload();
-  };
-
-  return (
-    <div className="rounded-lg border bg-muted/40 p-2">
-      {viewAs ? (
-        <>
-          <p className="mb-1.5 px-1 text-[10px] font-bold text-amber-600">
-            تطالع بيانات: {viewAs.name}
-          </p>
-          <Button
-            onClick={exit}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-center gap-2 text-amber-700 hover:bg-amber-500/15"
-          >
-            <EyeOff className="h-4 w-4" />
-            <span>العودة لبياناتي</span>
-          </Button>
-        </>
-      ) : (
-        <>
-          <p className="mb-1.5 px-1 text-[10px] font-bold text-muted-foreground">
-            مسموح لك بالاطلاع على
-          </p>
-          {sharedWithMe.map((owner) => (
-            <Button
-              key={owner.owner_id}
-              onClick={() => enter(owner.owner_id, owner.name, owner.email)}
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-2"
-            >
-              <Eye className="h-4 w-4 shrink-0" />
-              <span className="truncate">{owner.name}</span>
-            </Button>
-          ))}
-        </>
-      )}
-    </div>
-  );
-};
-
 export function AppSidebar() {
   const location = useLocation();
   const pathname = location?.pathname || "";
-  const { isAdmin } = useAuth();
 
   return (
     <Sidebar side="right" collapsible="icon">
@@ -204,15 +134,11 @@ export function AppSidebar() {
         <NavGroup label="الرئيسية" items={mainItems} pathname={pathname} />
         <NavGroup label="المسابقات" items={competitionItems} pathname={pathname} />
         <NavGroup label="أقسام أخرى" items={otherItems} pathname={pathname} />
-        <NavGroup
-          label="النظام"
-          items={isAdmin ? [...systemItems, ...adminItems] : systemItems}
-          pathname={pathname}
-        />
+        <NavGroup label="النظام" items={systemItems} pathname={pathname} />
         <NavGroup label="" items={switchItems} pathname={pathname} />
       </SidebarContent>
       <SidebarFooter className="group-data-[collapsible=icon]:hidden">
-        <ViewAsSwitcher />
+        <DbStatusIndicator />
       </SidebarFooter>
     </Sidebar>
   );

@@ -1,11 +1,11 @@
 import { Link } from "@/lib/router-compat";
-import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { BookOpenText, Scissors, LogOut } from "lucide-react";
+import { BookOpenText, Scissors, Database, WifiOff } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useDbStatus } from "@/offline/useDbStatus";
 
 const DepartmentSelect = () => {
-  const { signOut } = useAuth();
+  const dbStatus = useDbStatus();
 
   return (
     <div
@@ -13,19 +13,20 @@ const DepartmentSelect = () => {
       dir="rtl"
     >
       <div className="absolute top-4 left-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1 text-muted-foreground"
-          onClick={() => void signOut()}
-        >
-          <LogOut className="h-4 w-4" /> خروج
-        </Button>
+        <Link to="/database">
+          <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground">
+            <Database className="h-4 w-4" /> قاعدة البيانات
+          </Button>
+        </Link>
       </div>
 
       <img src={logo} alt="الشعار" className="h-24 w-auto mb-4" />
       <h1 className="text-2xl sm:text-3xl font-bold text-center">مركز إنماء الأهلي الخيري</h1>
-      <p className="text-muted-foreground mt-2 mb-8 text-center">اختر القسم الذي تريد إدارته</p>
+      <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-600/10 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-600/20">
+        <WifiOff className="h-3.5 w-3.5" />
+        يعمل بدون إنترنت · المجلد: <span dir="auto">{dbStatus.folderLabel}</span>
+      </span>
+      <p className="text-muted-foreground mt-3 mb-8 text-center">اختر القسم الذي تريد إدارته</p>
 
       <div className="grid w-full max-w-3xl grid-cols-1 gap-5 sm:grid-cols-2">
         <Link to="/quran">

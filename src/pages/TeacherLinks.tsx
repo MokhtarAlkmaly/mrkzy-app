@@ -1,6 +1,9 @@
 /**
- * روابط المعلمين والمعلمات — إنشاء روابط خاصة (كود بدون حساب) لكل معلم/ة وعام/شهر،
- * ونسخها وتغيير الكود وإيقافها وحذفها، مع «نسخ روابط الكل».
+ * روابط المعلمين والمعلمات — إنشاء «بوابات» خاصة (كود بدون حساب) لكل معلم/ة وعام/شهر،
+ * وتغيير الكود وإيقافها وحذفها.
+ *
+ * النسخة التي تعمل بدون إنترنت: لا يوجد خادم يستقبل ترسيلات من جوالات المعلمين،
+ * لذا تُفتح البوابة على هذا الجهاز نفسه (زر «فتح») ويُسلَّم الجهاز للمعلم/ة.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,6 +18,8 @@ import {
   Loader2,
   Inbox,
   CheckCircle2,
+  ExternalLink,
+  WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "@/lib/router-compat";
 import { getActiveYear, loadTeachers } from "@/utils/storage";
 import { START_YEAR, END_YEAR, TRACKING_MONTHS, formatYearKey } from "@/types/student";
 import {
@@ -53,7 +59,13 @@ const monthLabel = (m: number) => TRACKING_MONTHS.find((x) => x.value === m)?.la
 const TeacherLinks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const userId = user?.id || "";
+
+  /** يفتح بوابة المعلم/ة على هذا الجهاز (لا يوجد إنترنت لإرسال الرابط). */
+  const openPortalHere = (portal: TeacherPortal) => {
+    navigate(getPortalLink(portal, ""));
+  };
 
   const [portals, setPortals] = useState<TeacherPortal[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -191,7 +203,10 @@ const TeacherLinks = () => {
     try {
       await createPortal(userId, { teacher_name: name, year, month: newMonth });
       setNewTeacher("");
-      toast({ title: "أُنشئ الرابط", description: "انسخ الرابط وأرسله للمعلم/ة." });
+      toast({
+        title: "أُنشئت البوابة",
+        description: "اضغط «فتح» لفتحها على هذا الجهاز وتسليمه للمعلم/ة.",
+      });
       await load();
     } catch (err) {
       console.error(err);
@@ -302,18 +317,20 @@ const TeacherLinks = () => {
               روابط المعلمين والمعلمات
             </h1>
             <p className="mt-1 text-xs text-white/50">
-              كل رابط يقود معلم/ة إلى بطاقات طلابه لعام وشهر محددين — بدون تسجيل دخول. يُنشأ الرابط
+              كل بوابة تقود معلم/ة إلى بطاقات طلابه لعام وشهر محددين — بدون تسجيل دخول. تُنشأ البوابة
               فقط للمعلمين والمعلمات المضافين في صفحة «المعلمين والمعلمات».
             </p>
           </div>
-          <Button
-            onClick={() => setAllLinksOpen(true)}
-            variant="outline"
-            className="rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/10"
-          >
-            <Copy className="h-4 w-4" />
-            نسخ روابط الكل
-          </Button>
+        </div>
+
+        <div className="flex items-start gap-2 rounded-2xl bg-sky-400/10 p-3 text-xs leading-relaxed text-sky-100 ring-1 ring-sky-400/20">
+          <WifiOff className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+          <p>
+            هذه النسخة تعمل بدون إنترنت، لذا لا تُرسل الروابط إلى جوالات المعلمين. اضغط{" "}
+            <b>«فتح»</b> بجانب البوابة لفتحها على هذا الجهاز، وسلّمه للمعلم/ة ليدخل متابعة طلابه، ثم
+            راجع الترسيلات واعتمدها من «وارد المعلمين والمعلمات». ومن لا يستطيع الحضور: أدخل تقريره
+            يدوياً من صفحة الوارد.
+          </p>
         </div>
 
         {/* إنشاء رابط */}
@@ -463,9 +480,20 @@ const TeacherLinks = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => copyText(getPortalLink(p), `رابط ${p.teacher_name}`)}
+                        onClick={() => openPortalHere(p)}
+                        disabled={!p.active}
+                        className="gap-1 rounded-lg text-emerald-300 hover:bg-emerald-500/15 hover:text-emerald-200"
+                        aria-label="فتح البوابة على هذا الجهاز"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        فتح
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyText(p.code, `كود ${p.teacher_name}`)}
                         className="rounded-lg text-white/70 hover:bg-white/10 hover:text-white"
-                        aria-label="نسخ الرابط"
+                        aria-label="نسخ الكود"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
@@ -505,11 +533,10 @@ const TeacherLinks = () => {
         </div>
 
         <p className="text-[11px] leading-relaxed text-white/40">
-          · لا يُنشأ رابط إلا لمعلم/ة مضاف في صفحة «المعلمين والمعلمات والإكراميات» لنفس العام —
-          الروابط التي اسمها غير مضاف تظهر بشارة تحذير حمراء. · «تغيير الكود» ينشئ رمزاً جديداً —
-          الروابط القديمة تتوقف عن العمل، لذا أرسل الجديد للمعلم/ة. · «نسخ روابط الكل» يجمع روابط كل
-          الأعوام بنص واحد جاهز للإرسال على واتساب. · إيقاف الرابط يبقي ترسيالاته السابقة محفوظة. ·
-          من لا يملك جوالاً أو إنترنت: أدخل بياناته يدوياً من صفحة «وارد المعلمين والمعلمات».
+          · لا تُنشأ بوابة إلا لمعلم/ة مضاف في صفحة «المعلمين والمعلمات والإكراميات» لنفس العام —
+          البوابات التي اسمها غير مضاف تظهر بشارة تحذير حمراء. · «تغيير الكود» ينشئ رمزاً جديداً. ·
+          إيقاف البوابة يمنع فتحها ويبقي ترسيلاتها السابقة محفوظة. · يمكن أيضاً إدخال المتابعة
+          يدوياً من صفحة «وارد المعلمين والمعلمات».
         </p>
       </div>
 

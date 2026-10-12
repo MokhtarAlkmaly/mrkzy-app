@@ -1,27 +1,33 @@
-import { useState, useEffect, createContext, useContext, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from "@supabase/supabase-js";
-import { checkIsAdmin, listSharedWithMe, type SharedOwner } from "@/utils/users";
-import {
-  getViewAs,
-  setViewAs as persistViewAs,
-  subscribeViewAs,
-  type ViewAsTarget,
-} from "@/utils/viewAs";
+/**
+ * «الحساب» في النسخة التي تعمل بدون إنترنت.
+ *
+ * لا يوجد تسجيل دخول ولا خادم: مستخدم محلي واحد ثابت يملك كل البيانات
+ * المحفوظة في مجلد قاعدة البيانات. أُبقيت واجهة السياق نفسها (user/session/
+ * isAdmin/...) حتى تبقى الشاشات القائمة تعمل كما هي.
+ *
+ * signOut هنا = «إغلاق قاعدة البيانات» والعودة إلى شاشة اختيار المجلد.
+ */
+import { createContext, useCallback, useContext, useMemo } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import type { SharedOwner } from "@/utils/users";
+import type { ViewAsTarget } from "@/utils/viewAs";
+import { getLocalSession, getLocalUser } from "@/offline/localClient";
+import { closeDb, db } from "@/offline/dbManager";
+import { useDbStatus } from "@/offline/useDbStatus";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  /** هل الحساب الحالي مسؤول؟ */
+  /** لا مسؤولين في النسخة المحلية (لا يوجد مستخدمون آخرون). */
   isAdmin: boolean;
-  /** الحسابات التي سمحت لي بالاطلاع على بياناتها. */
+  /** دائماً فارغة محلياً. */
   sharedWithMe: SharedOwner[];
-  /** الحساب الذي أطالع بياناته حالياً (قراءة فقط)، أو null. */
+  /** دائماً null محلياً. */
   viewAs: ViewAsTarget | null;
-  /** تشغيل/إيقاف وضع الاطلاع. */
   setViewAs: (target: ViewAsTarget | null) => void;
   refreshAccess: () => Promise<void>;
+  /** يحفظ ويغلق قاعدة البيانات ثم يعود لشاشة اختيار المجلد. */
   signOut: () => Promise<void>;
 }
 
@@ -38,96 +44,33 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [sharedWithMe, setSharedWithMe] = useState<SharedOwner[]>([]);
-  const [viewAs, setViewAsState] = useState<ViewAsTarget | null>(null);
+  // يتحدّث عند فتح/إغلاق قاعدة البيانات (ولتحديث الاسم الظاهر).
+  const status = useDbStatus();
 
-  // مزامنة حالة العرض مع المخزن المشترك الذي تقرأه طبقة التخزين.
-  useEffect(() => {
-    setViewAsState(getViewAs());
-    return subscribeViewAs((target) => setViewAsState(target));
+  const signOut = useCallback(async () => {
+    await closeDb(false);
+    if (typeof window !== "undefined") window.location.assign("/setup");
   }, []);
 
-  const setViewAs = useCallback((target: ViewAsTarget | null) => {
-    persistViewAs(target);
-  }, []);
-
-  const loadAccess = useCallback(async (currentUser: User | null) => {
-    if (!currentUser) {
-      setIsAdmin(false);
-      setSharedWithMe([]);
-      return;
-    }
-    const [admin, shared] = await Promise.all([
-      checkIsAdmin().catch(() => false),
-      listSharedWithMe().catch(() => [] as SharedOwner[]),
-    ]);
-    setIsAdmin(admin);
-    setSharedWithMe(shared);
-
-    // إن سُحب الإذن أثناء الاطلاع، نُخرج المستخدم من وضع العرض فوراً.
-    const active = getViewAs();
-    if (active && !admin && !shared.some((s) => s.owner_id === active.id)) {
-      persistViewAs(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    const applySession = (nextSession: Session | null) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setLoading(false);
-      void loadAccess(nextSession?.user ?? null);
+  // ملاحظة: هوية الكائن user ثابتة طوال فتح قاعدة البيانات — كثير من الشاشات
+  // تعيد تحميل بياناتها عند تغيّر user، فلا نغيّره مع كل عملية حفظ.
+  const value = useMemo<AuthContextType>(() => {
+    const session = status.open ? (getLocalSession(db) as unknown as Session) : null;
+    const user = status.open ? (getLocalUser(db) as unknown as User) : null;
+    return {
+      session,
+      user,
+      loading: false,
+      isAdmin: false,
+      sharedWithMe: [],
+      viewAs: null,
+      setViewAs: () => {},
+      refreshAccess: async () => {},
+      signOut,
     };
+  }, [status.open, signOut]);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      // الخروج من وضع الاطلاع عند تسجيل الخروج أو تبديل الحساب.
-      if (event === "SIGNED_OUT") persistViewAs(null);
-      applySession(session);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [loadAccess]);
-
-  const refreshAccess = useCallback(async () => {
-    await loadAccess(user);
-  }, [loadAccess, user]);
-
-  const signOut = async () => {
-    persistViewAs(null);
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setIsAdmin(false);
-    setSharedWithMe([]);
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user,
-        loading,
-        isAdmin,
-        sharedWithMe,
-        viewAs,
-        setViewAs,
-        refreshAccess,
-        signOut,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

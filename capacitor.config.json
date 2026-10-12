@@ -1,12 +1,5 @@
 {
-  "appId": "org.inmaa.msabkarmdan",
-  "appName": "مركز إنماء الأهلي الخيري",
-  "webDir": ".output/public",
-  "plugins": {
-    "CapacitorSQLite": {
-      "androidIsEncryption": false,
-      "iosIsEncryption": false,
-      "iosDatabaseLocation": "Library/CapacitorDatabase"
-    }
-  }
+  "appId": "org.inmaa.mrkzynet",
+  "appName": "مركز إنماء بدون إنترنت",
+  "webDir": ".output/public"
 }

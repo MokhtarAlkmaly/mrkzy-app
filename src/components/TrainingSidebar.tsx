@@ -11,7 +11,8 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "@/lib/router-compat";
-import { LayoutGrid, Users, BookMarked, ArrowLeftRight } from "lucide-react";
+import { LayoutGrid, Users, BookMarked, ArrowLeftRight, Database } from "lucide-react";
+import { DbStatusIndicator } from "@/components/DbStatusIndicator";
 import logo from "@/assets/logo.png";
 
 const items = [
@@ -56,6 +57,14 @@ export function TrainingSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/database"}>
+                  <Link to="/database">
+                    <Database />
+                    <span>قاعدة البيانات</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link to="/">
                     <ArrowLeftRight />
@@ -67,7 +76,9 @@ export function TrainingSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter className="group-data-[collapsible=icon]:hidden">
+        <DbStatusIndicator />
+      </SidebarFooter>
     </Sidebar>
   );
 }

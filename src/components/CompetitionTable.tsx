@@ -118,7 +118,6 @@ export const CompetitionTable = ({
       /* ignore */
     }
     if (!cloudLoaded) return;
-    if (!navigator.onLine) return;
     const pushToCloud = async () => {
       try {
         await setTableFilters(data);

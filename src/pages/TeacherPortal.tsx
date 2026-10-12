@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PortalFormFields } from "@/components/PortalFormFields";
 import { useToast } from "@/hooks/use-toast";
-import { useSearchParams } from "@/lib/router-compat";
+import { Link, useSearchParams } from "@/lib/router-compat";
 import { calcPagesBetweenAsync } from "@/utils/quranData";
 import { formatYearKey } from "@/types/student";
 import { TRACKING_MONTHS } from "@/types/student";
@@ -352,12 +352,12 @@ const TeacherPortal = () => {
           <AlertCircle className="mx-auto h-10 w-10 text-rose-400" />
           <h1 className="mt-3 text-lg font-black text-white">تعذّر فتح البوابة</h1>
           <p className="mt-2 text-sm text-white/60">{loadError}</p>
-          <a
-            href="/"
+          <Link
+            to="/teacher-links"
             className="mt-4 inline-block text-xs font-bold text-emerald-300 underline underline-offset-4"
           >
-            العودة للرئيسية
-          </a>
+            العودة إلى روابط المعلمين والمعلمات
+          </Link>
         </div>
       </div>
     );
@@ -386,6 +386,13 @@ const TeacherPortal = () => {
               للمعلم/ة: {portal.teacher_name} · {portal.students.length} طالب/ة
             </p>
           </div>
+          {/* النسخة المحلية: البوابة مفتوحة على جهاز المشرف — زر للعودة بعد انتهاء المعلم/ة */}
+          <Link
+            to="/teacher-links"
+            className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-[11px] font-bold text-white/80 ring-1 ring-white/15 hover:bg-white/15"
+          >
+            إنهاء والعودة
+          </Link>
         </div>
       </header>
 

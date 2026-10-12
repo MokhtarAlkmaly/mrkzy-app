@@ -1,330 +1,100 @@
 /**
- * طبقة التخزين المحلي — تعمل الآن فوق قاعدة بيانات SQLite حقيقية بدل IndexedDB
- * (عبر @capacitor-community/sqlite: محرك SQLite أصلي على أندرويد/iOS، ومحرك
- * sql.js/WASM على المتصفح). البيانات تُخزَّن محليًا وتتزامن مع السحابة فقط
- * عند الضغط على "حفظ" (كما كان الحال سابقًا).
+ * طبقة التخزين المحلي — النسخة التي تعمل بدون إنترنت.
  *
- * ملاحظة مهمة: كل الدوال المُصدَّرة من هذا الملف تحمل نفس الأسماء والتوقيعات
- * التي كانت موجودة في نسخة IndexedDB السابقة، حتى لا يحتاج أي ملف آخر في
- * المشروع (storage.ts والصفحات) إلى أي تعديل.
+ * كانت هذه الطبقة «كاشاً» (SQLite) يتزامن مع السحابة. في هذه النسخة لا توجد
+ * سحابة: الدوال نفسها (بنفس الأسماء والتوقيعات حتى لا يتغير storage.ts
+ * والصفحات) تقرأ وتكتب مباشرة في قاعدة بيانات المجلد (src/offline) — أي
+ * في ملفات JSON داخل المجلد الذي اختاره المستخدم على الهاتف أو بطاقة SD.
+ *
+ * دوال «التغييرات المعلقة» (markDirty...) لم يعد لها معنى (لا يوجد شيء
+ * يُرفع)، فأصبحت بلا عمل وتبقى فقط للتوافق.
  */
 
-import type { capSQLiteSet } from "@capacitor-community/sqlite";
-import { getDB, persist } from "./sqliteClient";
+import { db } from "@/offline/dbManager";
+import { cloneRow } from "@/offline/folderDb";
+import { valuesEqual } from "@/offline/query";
+import type { Row } from "@/offline/schema";
 
-// قيمة أي عمود في جداول SQLite (أحادية البعد فقط — التجميع يتم كـ JSON عند الحاجة)
 type SqlValue = string | number | boolean | null;
-/** صف مسطّط بأعمدة مفتاحية (مخططات الجداول ديناميكية عبر سجل TABLES) */
-type SqlRow = Record<string, SqlValue>;
 
-const STORES = {
-  students: "students",
-  hifzHistory: "hifz_history",
-  yearData: "year_data",
-  settings: "settings",
-  meta: "meta",
-  pending: "pending_changes",
-  teachers: "teachers",
-  teacherBonuses: "teacher_bonuses",
-  donors: "donors",
-  awards: "awards",
-  ceremonyExpenses: "ceremony_expenses",
-  certificates: "certificates",
-  media: "media",
-} as const;
-
-// ========== سجلّ الجداول: يصف كل جدول (أعمدته ومفتاحه الأساسي) لتبقى دوال
-// CRUD العامة أدناه صالحة لأي جدول دون تكرار كود SQL يدويًا ==========
-
-interface TableConfig {
-  columns: string[];
-  pk: string[];
-  /** تحويل الكائن القادم من الاستدعاء إلى صف أعمدة مسطّح (افتراضيًا: أخذ نفس الحقول) */
-  toRow?: (item: unknown) => SqlRow;
-  /** تحويل الصف القادم من SQLite إلى الشكل الذي يتوقعه بقية الكود */
-  fromRow?: (row: SqlRow) => object;
-}
-
-const TABLES: Record<string, TableConfig> = {
-  [STORES.students]: {
-    columns: [
-      "id",
-      "name",
-      "teacher",
-      "user_id",
-      "gender",
-      "hijri_join_date",
-      "initial_hifz",
-      "first_competition_year",
-      "status",
-      "school_grade",
-      "guardian_phone",
-      "student_phone",
-      "custom_fields",
-      "notes",
-    ],
-    pk: ["id"],
-    // الأعمدة المخصصة تُخزَّن نصاً (JSON) داخل SQLite وتُفكّ عند القراءة.
-    toRow: (item) => {
-      const it = item as Record<string, unknown>;
-      const row: SqlRow = {};
-      for (const [key, value] of Object.entries(it)) {
-        row[key] = (value === undefined ? null : value) as SqlValue;
-      }
-      row.custom_fields =
-        typeof it.custom_fields === "object" && it.custom_fields !== null
-          ? JSON.stringify(it.custom_fields)
-          : ((it.custom_fields as SqlValue | undefined) ?? null);
-      return row;
-    },
-    fromRow: (row) => {
-      let customFieldsObj = {};
-      if (row.custom_fields) {
-        try {
-          customFieldsObj = JSON.parse(row.custom_fields as string);
-        } catch {
-          customFieldsObj = {};
-        }
-      }
-      return { ...row, custom_fields: customFieldsObj };
-    },
-  },
-  [STORES.hifzHistory]: {
-    columns: ["student_id", "year_key", "value"],
-    pk: ["student_id", "year_key"],
-  },
-  [STORES.yearData]: {
-    columns: [
-      "student_id",
-      "year",
-      "base_hifz",
-      "total_hifz",
-      "parts",
-      "annual",
-      "recitation",
-      "memorization",
-      "total",
-      "grade",
-      "prize",
-      "status_prize",
-      "rank",
-      "teacher",
-    ],
-    pk: ["student_id", "year"],
-  },
-  [STORES.settings]: {
-    columns: ["key", "value"],
-    pk: ["key"],
-    toRow: (item) => {
-      const it = item as { key: string; value: unknown };
-      return { key: it.key, value: JSON.stringify(it.value ?? null) };
-    },
-    fromRow: (row) => ({
-      key: row.key,
-      value: row.value != null ? JSON.parse(String(row.value)) : undefined,
-    }),
-  },
-  [STORES.meta]: {
-    columns: ["key", "time"],
-    pk: ["key"],
-  },
-  [STORES.pending]: {
-    columns: ["key", "entity", "op", "ref", "ts"],
-    pk: ["key"],
-    toRow: (item) => {
-      const it = item as { key: string; entity: string; op: string; ref: unknown; ts: number };
-      return {
-        key: it.key,
-        entity: it.entity,
-        op: it.op,
-        ref: JSON.stringify(it.ref ?? null),
-        ts: it.ts,
-      };
-    },
-    fromRow: (row) => ({ ...row, ref: row.ref != null ? JSON.parse(String(row.ref)) : null }),
-  },
-  [STORES.teachers]: {
-    columns: ["id", "user_id", "year", "name", "created_at", "updated_at"],
-    pk: ["id"],
-  },
-  [STORES.teacherBonuses]: {
-    columns: [
-      "id",
-      "user_id",
-      "teacher_name",
-      "year",
-      "month",
-      "amount",
-      "created_at",
-      "updated_at",
-    ],
-    pk: ["id"],
-  },
-  [STORES.donors]: {
-    columns: [
-      "id",
-      "user_id",
-      "year",
-      "name",
-      "donor_type",
-      "phone",
-      "pledged_amount",
-      "paid_amount",
-      "in_kind",
-      "notes",
-      "created_at",
-      "updated_at",
-    ],
-    pk: ["id"],
-  },
-  [STORES.awards]: {
-    columns: [
-      "id",
-      "user_id",
-      "year",
-      "recipient_type",
-      "recipient_name",
-      "award_type",
-      "award_kind",
-      "amount",
-      "item",
-      "student_name",
-      "notes",
-      "awarded_at",
-      "funded_by",
-      "created_at",
-      "updated_at",
-    ],
-    pk: ["id"],
-  },
-  [STORES.ceremonyExpenses]: {
-    columns: [
-      "id",
-      "user_id",
-      "year",
-      "category",
-      "description",
-      "amount",
-      "spent_at",
-      "funded_by",
-      "notes",
-      "created_at",
-      "updated_at",
-    ],
-    pk: ["id"],
-  },
-  [STORES.certificates]: {
-    columns: [
-      "id",
-      "user_id",
-      "year",
-      "recipient_type",
-      "recipient_name",
-      "cert_type",
-      "title",
-      "notes",
-      "issued_at",
-      "created_at",
-      "updated_at",
-    ],
-    pk: ["id"],
-  },
-  [STORES.media]: {
-    columns: [
-      "id",
-      "user_id",
-      "year",
-      "month",
-      "title",
-      "file_path",
-      "file_type",
-      "file_size",
-      "created_at",
-    ],
-    pk: ["id"],
-  },
+/** اسم «المخزن» القديم → الجدول المحلي وأعمدة التعريف المستخدمة في هذه الطبقة. */
+const STORES: Record<string, { table: string; key: string[] }> = {
+  students: { table: "students", key: ["id"] },
+  hifz_history: { table: "hifz_history", key: ["student_id", "year_key"] },
+  year_data: { table: "year_data", key: ["student_id", "year"] },
+  settings: { table: "app_settings", key: ["key"] },
+  teachers: { table: "teachers", key: ["id"] },
+  teacher_bonuses: { table: "teacher_bonuses", key: ["id"] },
+  donors: { table: "donors", key: ["id"] },
+  awards: { table: "awards", key: ["id"] },
+  ceremony_expenses: { table: "ceremony_expenses", key: ["id"] },
+  certificates: { table: "certificates", key: ["id"] },
+  media: { table: "media", key: ["id"] },
 };
 
-const getTable = (storeName: string): TableConfig => {
-  const cfg = TABLES[storeName];
-  if (!cfg) throw new Error(`localDB: جدول غير معروف "${storeName}"`);
-  return cfg;
+const resolveStore = (storeName: string) => {
+  const store = STORES[storeName];
+  if (!store) throw new Error(`localDB: مخزن غير معروف "${storeName}"`);
+  return store;
 };
-
-const toRow = (cfg: TableConfig, item: object): SqlRow => {
-  const raw = cfg.toRow ? cfg.toRow(item) : (item as SqlRow);
-  const row: SqlRow = {};
-  for (const col of cfg.columns) row[col] = raw[col] ?? null;
-  return row;
-};
-
-const fromRow = (cfg: TableConfig, row: SqlRow): object => (cfg.fromRow ? cfg.fromRow(row) : row);
 
 const keyValues = (key: SqlValue | SqlValue[]): SqlValue[] => (Array.isArray(key) ? key : [key]);
 
-// ========== دوال CRUD العامة (نفس توقيعات IndexedDB السابقة تمامًا) ==========
+const matchKey = (cols: string[], values: unknown[]) => (row: Row) =>
+  cols.every((c, i) => valuesEqual(row[c], values[i]));
+
+// ========== دوال CRUD العامة (نفس التوقيعات السابقة) ==========
 
 export const putItem = async (storeName: string, item: object) => {
-  const cfg = getTable(storeName);
-  const row = toRow(cfg, item);
-  const db = await getDB();
-  const placeholders = cfg.columns.map(() => "?").join(", ");
-  const sql = `INSERT OR REPLACE INTO ${storeName} (${cfg.columns.join(", ")}) VALUES (${placeholders})`;
-  await db.run(
-    sql,
-    cfg.columns.map((c) => row[c]),
-    true,
-  );
-  await persist();
+  const { table, key } = resolveStore(storeName);
+  const input = { ...(item as Row) };
+  // الجداول المعرّفة بغير id (سجل الحفظ، بيانات الأعوام، الإعدادات): المعرّف
+  // الداخلي والطوابع الزمنية تديرها قاعدة البيانات، لا هذه الطبقة.
+  if (!key.includes("id")) {
+    delete input.id;
+    delete input.created_at;
+  }
+  delete input.updated_at;
+  const values = key.map((k) => input[k]);
+  const rows = db.rowsRef(table);
+  const existing = rows.find(matchKey(key, values));
+  if (existing) {
+    db.updateRows(table, (r) => r === existing, input);
+  } else {
+    db.insertRows(table, [input]);
+  }
 };
 
 export const getItem = async <T>(
   storeName: string,
   key: SqlValue | SqlValue[],
 ): Promise<T | undefined> => {
-  const cfg = getTable(storeName);
-  const db = await getDB();
-  const where = cfg.pk.map((c) => `${c} = ?`).join(" AND ");
-  const res = await db.query(`SELECT * FROM ${storeName} WHERE ${where} LIMIT 1`, keyValues(key));
-  const row = res.values?.[0];
-  return row ? (fromRow(cfg, row) as T) : undefined;
+  const { table, key: cols } = resolveStore(storeName);
+  const row = db.rowsRef(table).find(matchKey(cols, keyValues(key)));
+  return row ? (cloneRow(row) as T) : undefined;
 };
 
 export const getAllItems = async <T>(storeName: string): Promise<T[]> => {
-  const cfg = getTable(storeName);
-  const db = await getDB();
-  const res = await db.query(`SELECT * FROM ${storeName}`);
-  return (res.values ?? []).map((row) => fromRow(cfg, row) as T);
+  const { table } = resolveStore(storeName);
+  return db.all(table) as T[];
 };
 
 export const deleteItem = async (storeName: string, key: SqlValue | SqlValue[]) => {
-  const cfg = getTable(storeName);
-  const db = await getDB();
-  const where = cfg.pk.map((c) => `${c} = ?`).join(" AND ");
-  await db.run(`DELETE FROM ${storeName} WHERE ${where}`, keyValues(key), true);
-  await persist();
+  const { table, key: cols } = resolveStore(storeName);
+  // حذف الطالب/ة يحذف تلقائياً سجلاته المرتبطة (CASCADE) كما في PostgreSQL.
+  db.deleteRows(table, matchKey(cols, keyValues(key)));
 };
 
 export const clearStore = async (storeName: string) => {
-  getTable(storeName); // يتحقق أن الاسم معروف
-  const db = await getDB();
-  await db.run(`DELETE FROM ${storeName}`, [], true);
-  await persist();
+  const { table } = resolveStore(storeName);
+  db.deleteRows(table, () => true);
 };
 
-/** استبدال كامل محتوى جدول دفعة واحدة (حذف ثم إدراج) ضمن معاملة واحدة ذرّية */
+/** استبدال كامل محتوى جدول دفعة واحدة. */
 const cacheRecords = async <T extends object>(storeName: string, rows: T[]) => {
-  const cfg = getTable(storeName);
-  const db = await getDB();
-  const set: capSQLiteSet[] = [{ statement: `DELETE FROM ${storeName}`, values: [] }];
-  const placeholders = cfg.columns.map(() => "?").join(", ");
-  const insertSql = `INSERT OR REPLACE INTO ${storeName} (${cfg.columns.join(", ")}) VALUES (${placeholders})`;
-  for (const item of rows) {
-    const row = toRow(cfg, item);
-    set.push({ statement: insertSql, values: cfg.columns.map((c) => row[c]) });
-  }
-  await db.executeSet(set, true);
-  await persist();
+  const { table } = resolveStore(storeName);
+  db.deleteRows(table, () => true);
+  if (rows.length > 0) db.insertRows(table, rows as Row[]);
 };
 
 // ========== Students ==========
@@ -347,10 +117,10 @@ export interface CachedStudent {
 }
 
 export const cacheStudents = async (students: CachedStudent[]) =>
-  cacheRecords(STORES.students, students);
-export const getCachedStudents = () => getAllItems<CachedStudent>(STORES.students);
-export const deleteCachedStudent = (id: number) => deleteItem(STORES.students, id);
-export const putCachedStudent = (student: CachedStudent) => putItem(STORES.students, student);
+  cacheRecords("students", students);
+export const getCachedStudents = () => getAllItems<CachedStudent>("students");
+export const deleteCachedStudent = (id: number) => deleteItem("students", id);
+export const putCachedStudent = (student: CachedStudent) => putItem("students", student);
 
 // ========== Hifz History ==========
 
@@ -360,10 +130,9 @@ export interface CachedHifzRow {
   value: string;
 }
 
-export const cacheHifzHistory = async (rows: CachedHifzRow[]) =>
-  cacheRecords(STORES.hifzHistory, rows);
-export const getCachedHifzHistory = () => getAllItems<CachedHifzRow>(STORES.hifzHistory);
-export const putCachedHifzRow = (row: CachedHifzRow) => putItem(STORES.hifzHistory, row);
+export const cacheHifzHistory = async (rows: CachedHifzRow[]) => cacheRecords("hifz_history", rows);
+export const getCachedHifzHistory = () => getAllItems<CachedHifzRow>("hifz_history");
+export const putCachedHifzRow = (row: CachedHifzRow) => putItem("hifz_history", row);
 
 // ========== Year Data ==========
 
@@ -384,9 +153,9 @@ export interface CachedYearData {
   teacher: string;
 }
 
-export const cacheYearData = async (rows: CachedYearData[]) => cacheRecords(STORES.yearData, rows);
-export const getCachedYearData = () => getAllItems<CachedYearData>(STORES.yearData);
-export const putCachedYearData = (row: CachedYearData) => putItem(STORES.yearData, row);
+export const cacheYearData = async (rows: CachedYearData[]) => cacheRecords("year_data", rows);
+export const getCachedYearData = () => getAllItems<CachedYearData>("year_data");
+export const putCachedYearData = (row: CachedYearData) => putItem("year_data", row);
 
 // ========== Teachers ==========
 
@@ -399,11 +168,11 @@ export interface CachedTeacher {
   updated_at?: string;
 }
 
-export const cacheTeachers = (rows: CachedTeacher[]) => cacheRecords(STORES.teachers, rows);
-export const getCachedTeachers = () => getAllItems<CachedTeacher>(STORES.teachers);
-export const getCachedTeacher = (id: string) => getItem<CachedTeacher>(STORES.teachers, id);
-export const putCachedTeacher = (row: CachedTeacher) => putItem(STORES.teachers, row);
-export const deleteCachedTeacher = (id: string) => deleteItem(STORES.teachers, id);
+export const cacheTeachers = (rows: CachedTeacher[]) => cacheRecords("teachers", rows);
+export const getCachedTeachers = () => getAllItems<CachedTeacher>("teachers");
+export const getCachedTeacher = (id: string) => getItem<CachedTeacher>("teachers", id);
+export const putCachedTeacher = (row: CachedTeacher) => putItem("teachers", row);
+export const deleteCachedTeacher = (id: string) => deleteItem("teachers", id);
 
 // ========== Teacher Bonuses ==========
 
@@ -419,13 +188,12 @@ export interface CachedTeacherBonus {
 }
 
 export const cacheTeacherBonuses = (rows: CachedTeacherBonus[]) =>
-  cacheRecords(STORES.teacherBonuses, rows);
-export const getCachedTeacherBonuses = () => getAllItems<CachedTeacherBonus>(STORES.teacherBonuses);
+  cacheRecords("teacher_bonuses", rows);
+export const getCachedTeacherBonuses = () => getAllItems<CachedTeacherBonus>("teacher_bonuses");
 export const getCachedTeacherBonus = (id: string) =>
-  getItem<CachedTeacherBonus>(STORES.teacherBonuses, id);
-export const putCachedTeacherBonus = (row: CachedTeacherBonus) =>
-  putItem(STORES.teacherBonuses, row);
-export const deleteCachedTeacherBonus = (id: string) => deleteItem(STORES.teacherBonuses, id);
+  getItem<CachedTeacherBonus>("teacher_bonuses", id);
+export const putCachedTeacherBonus = (row: CachedTeacherBonus) => putItem("teacher_bonuses", row);
+export const deleteCachedTeacherBonus = (id: string) => deleteItem("teacher_bonuses", id);
 
 // ========== Donors ==========
 
@@ -444,11 +212,11 @@ export interface CachedDonor {
   updated_at?: string;
 }
 
-export const cacheDonors = (rows: CachedDonor[]) => cacheRecords(STORES.donors, rows);
-export const getCachedDonors = () => getAllItems<CachedDonor>(STORES.donors);
-export const getCachedDonor = (id: string) => getItem<CachedDonor>(STORES.donors, id);
-export const putCachedDonor = (row: CachedDonor) => putItem(STORES.donors, row);
-export const deleteCachedDonor = (id: string) => deleteItem(STORES.donors, id);
+export const cacheDonors = (rows: CachedDonor[]) => cacheRecords("donors", rows);
+export const getCachedDonors = () => getAllItems<CachedDonor>("donors");
+export const getCachedDonor = (id: string) => getItem<CachedDonor>("donors", id);
+export const putCachedDonor = (row: CachedDonor) => putItem("donors", row);
+export const deleteCachedDonor = (id: string) => deleteItem("donors", id);
 
 // ========== Awards ==========
 
@@ -470,11 +238,11 @@ export interface CachedAward {
   updated_at?: string;
 }
 
-export const cacheAwards = (rows: CachedAward[]) => cacheRecords(STORES.awards, rows);
-export const getCachedAwards = () => getAllItems<CachedAward>(STORES.awards);
-export const getCachedAward = (id: string) => getItem<CachedAward>(STORES.awards, id);
-export const putCachedAward = (row: CachedAward) => putItem(STORES.awards, row);
-export const deleteCachedAward = (id: string) => deleteItem(STORES.awards, id);
+export const cacheAwards = (rows: CachedAward[]) => cacheRecords("awards", rows);
+export const getCachedAwards = () => getAllItems<CachedAward>("awards");
+export const getCachedAward = (id: string) => getItem<CachedAward>("awards", id);
+export const putCachedAward = (row: CachedAward) => putItem("awards", row);
+export const deleteCachedAward = (id: string) => deleteItem("awards", id);
 
 // ========== Ceremony Expenses ==========
 
@@ -493,14 +261,14 @@ export interface CachedCeremonyExpense {
 }
 
 export const cacheCeremonyExpenses = (rows: CachedCeremonyExpense[]) =>
-  cacheRecords(STORES.ceremonyExpenses, rows);
+  cacheRecords("ceremony_expenses", rows);
 export const getCachedCeremonyExpenses = () =>
-  getAllItems<CachedCeremonyExpense>(STORES.ceremonyExpenses);
+  getAllItems<CachedCeremonyExpense>("ceremony_expenses");
 export const getCachedCeremonyExpense = (id: string) =>
-  getItem<CachedCeremonyExpense>(STORES.ceremonyExpenses, id);
+  getItem<CachedCeremonyExpense>("ceremony_expenses", id);
 export const putCachedCeremonyExpense = (row: CachedCeremonyExpense) =>
-  putItem(STORES.ceremonyExpenses, row);
-export const deleteCachedCeremonyExpense = (id: string) => deleteItem(STORES.ceremonyExpenses, id);
+  putItem("ceremony_expenses", row);
+export const deleteCachedCeremonyExpense = (id: string) => deleteItem("ceremony_expenses", id);
 
 // ========== Certificates ==========
 
@@ -518,13 +286,11 @@ export interface CachedCertificate {
   updated_at?: string;
 }
 
-export const cacheCertificates = (rows: CachedCertificate[]) =>
-  cacheRecords(STORES.certificates, rows);
-export const getCachedCertificates = () => getAllItems<CachedCertificate>(STORES.certificates);
-export const getCachedCertificate = (id: string) =>
-  getItem<CachedCertificate>(STORES.certificates, id);
-export const putCachedCertificate = (row: CachedCertificate) => putItem(STORES.certificates, row);
-export const deleteCachedCertificate = (id: string) => deleteItem(STORES.certificates, id);
+export const cacheCertificates = (rows: CachedCertificate[]) => cacheRecords("certificates", rows);
+export const getCachedCertificates = () => getAllItems<CachedCertificate>("certificates");
+export const getCachedCertificate = (id: string) => getItem<CachedCertificate>("certificates", id);
+export const putCachedCertificate = (row: CachedCertificate) => putItem("certificates", row);
+export const deleteCachedCertificate = (id: string) => deleteItem("certificates", id);
 
 // ========== Media Metadata ==========
 
@@ -540,52 +306,41 @@ export interface CachedMedia {
   created_at?: string;
 }
 
-export const cacheMedia = (rows: CachedMedia[]) => cacheRecords(STORES.media, rows);
-export const getCachedMedia = () => getAllItems<CachedMedia>(STORES.media);
-export const getCachedMediaItem = (id: string) => getItem<CachedMedia>(STORES.media, id);
-export const putCachedMedia = (row: CachedMedia) => putItem(STORES.media, row);
-export const deleteCachedMedia = (id: string) => deleteItem(STORES.media, id);
+export const cacheMedia = (rows: CachedMedia[]) => cacheRecords("media", rows);
+export const getCachedMedia = () => getAllItems<CachedMedia>("media");
+export const getCachedMediaItem = (id: string) => getItem<CachedMedia>("media", id);
+export const putCachedMedia = (row: CachedMedia) => putItem("media", row);
+export const deleteCachedMedia = (id: string) => deleteItem("media", id);
 
-// ========== Settings ==========
+// ========== Settings (مفتاح/قيمة في جدول app_settings) ==========
 
 export const setCachedSetting = async (key: string, value: unknown) => {
-  await putItem(STORES.settings, { key, value });
+  await putItem("settings", { key, value: value === undefined ? null : value });
 };
 
 export const getCachedSetting = async <T>(key: string): Promise<T | undefined> => {
-  const item = await getItem<{ key: string; value: T }>(STORES.settings, key);
-  return item?.value;
+  const item = await getItem<{ key: string; value: T | null }>("settings", key);
+  return item?.value ?? undefined;
 };
 
-// ========== Meta (last sync time etc) ==========
+// ========== Meta ==========
 
-export const setLastSyncTime = async () => {
-  await putItem(STORES.meta, { key: "lastSync", time: Date.now() });
-};
+/** لا توجد مزامنة: «آخر مزامنة» = آخر حفظ ناجح في المجلد. */
+export const setLastSyncTime = async () => {};
 
-export const getLastSyncTime = async (): Promise<number | null> => {
-  const item = await getItem<{ key: string; time: number }>(STORES.meta, "lastSync");
-  return item?.time || null;
-};
+export const getLastSyncTime = async (): Promise<number | null> => db.status.lastSavedAt;
 
-export const isCachePopulated = async (): Promise<boolean> => {
-  const lastSync = await getLastSyncTime();
-  return lastSync !== null;
-};
+/** البيانات المحلية هي المصدر الوحيد — جاهزة دائماً متى كانت قاعدة البيانات مفتوحة. */
+export const isCachePopulated = async (): Promise<boolean> => db.isOpen();
 
 // ========== Clear all ==========
 
+/** يمسح كل جداول هذه الطبقة (لا يُستدعى تلقائياً أبداً في النسخة المحلية). */
 export const clearAllCache = async () => {
-  const db = await getDB();
-  const set: capSQLiteSet[] = Object.values(STORES).map((name) => ({
-    statement: `DELETE FROM ${name}`,
-    values: [],
-  }));
-  await db.executeSet(set, true);
-  await persist();
+  for (const { table } of Object.values(STORES)) db.deleteRows(table, () => true);
 };
 
-// ========== Pending Changes (incremental sync) ==========
+// ========== التغييرات المعلقة (لم يعد لها عمل — لا توجد سحابة) ==========
 
 export type PendingOp = "upsert" | "delete";
 export type PendingEntity =
@@ -600,7 +355,6 @@ export type PendingEntity =
   | "certificate"
   | "media";
 
-/** المعرّفات اللازمة لاسترجاع السجل (حسب نوع الكيان) */
 export interface PendingRef {
   id?: number | string;
   student_id?: number;
@@ -610,70 +364,35 @@ export interface PendingRef {
 }
 
 export interface PendingChange {
-  key: string; // e.g. "student:5", "hifz:5|h1441", "year:5|1447"
+  key: string;
   entity: PendingEntity;
   op: PendingOp;
   ref: PendingRef;
   ts: number;
 }
 
-export const markDirty = (entity: PendingEntity, op: PendingOp, ref: PendingRef) => {
-  let key = "";
-  if (entity === "student") key = `student:${ref.id}`;
-  else if (entity === "hifz") key = `hifz:${ref.student_id}|${ref.year_key}`;
-  else if (entity === "year") key = `year:${ref.student_id}|${ref.year}`;
-  else if (entity === "teacher") key = `teacher:${ref.id}`;
-  else if (entity === "teacher_bonus") key = `teacher_bonus:${ref.id}`;
-  else if (entity === "donor") key = `donor:${ref.id}`;
-  else if (entity === "award") key = `award:${ref.id}`;
-  else if (entity === "expense") key = `expense:${ref.id}`;
-  else if (entity === "certificate") key = `certificate:${ref.id}`;
-  else if (entity === "media") key = `media:${ref.id}`;
-  return putItem(STORES.pending, { key, entity, op, ref, ts: Date.now() } as PendingChange);
-};
+export const markDirty = async (_entity: PendingEntity, _op: PendingOp, _ref: PendingRef) => {};
 
-export const getPendingChanges = () => getAllItems<PendingChange>(STORES.pending);
+export const getPendingChanges = async (): Promise<PendingChange[]> => [];
 
-export const clearPending = (key: string) => deleteItem(STORES.pending, key);
+export const clearPending = async (_key: string) => {};
 
-export const clearAllPending = () => clearStore(STORES.pending);
+export const clearAllPending = async () => {};
 
-// Re-key pending entries when a temp student id is replaced by the real cloud id
-export const remapPendingStudentId = async (oldId: number, newId: number) => {
-  const all = await getPendingChanges();
-  for (const p of all) {
-    let touched = false;
-    if (p.entity === "student" && p.ref?.id === oldId) {
-      p.ref.id = newId;
-      touched = true;
-    } else if ((p.entity === "hifz" || p.entity === "year") && p.ref?.student_id === oldId) {
-      p.ref.student_id = newId;
-      touched = true;
-    }
-    if (touched) {
-      await deleteItem(STORES.pending, p.key);
-      await markDirty(p.entity, p.op, p.ref);
-    }
-  }
-};
+export const remapPendingStudentId = async (_oldId: number, _newId: number) => {};
 
-// ========== استعلامات إضافية مستفيدة من SQL حقيقي (إضافات "متقدمة" فوق نفس الواجهة) ==========
+// ========== استعلامات إضافية ==========
 
-/** بحث بالاسم مباشرة داخل SQLite (بدل تحميل كل الطلاب وفلترتهم في الجافاسكربت) */
+/** بحث بالاسم داخل الطلاب والطالبات. */
 export const searchCachedStudentsByName = async (query: string): Promise<CachedStudent[]> => {
-  const db = await getDB();
-  const res = await db.query(`SELECT * FROM ${STORES.students} WHERE name LIKE ? ORDER BY name`, [
-    `%${query}%`,
-  ]);
-  return (res.values ?? []) as CachedStudent[];
+  const q = query.trim();
+  return (db.all("students") as unknown as CachedStudent[])
+    .filter((s) => (s.name || "").includes(q))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
 };
 
-/** بيانات سنة معيّنة لطالب واحد فقط، عبر فهرس student_id بدل مسح الجدول كاملاً */
-export const getCachedYearDataForStudent = async (studentId: number): Promise<CachedYearData[]> => {
-  const db = await getDB();
-  const res = await db.query(
-    `SELECT * FROM ${STORES.yearData} WHERE student_id = ? ORDER BY year`,
-    [studentId],
-  );
-  return (res.values ?? []) as CachedYearData[];
-};
+/** بيانات كل الأعوام لطالب/ة واحد/ة. */
+export const getCachedYearDataForStudent = async (studentId: number): Promise<CachedYearData[]> =>
+  (db.all("year_data") as unknown as CachedYearData[])
+    .filter((r) => valuesEqual(r.student_id, studentId))
+    .sort((a, b) => a.year.localeCompare(b.year));

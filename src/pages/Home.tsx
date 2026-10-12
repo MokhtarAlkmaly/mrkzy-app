@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@/lib/router-compat";
 import {
   GraduationCap,
@@ -17,7 +16,7 @@ import {
   BookOpenCheck,
   LayoutDashboard,
   Settings as SettingsIcon,
-  LogOut,
+  Database,
   FileText,
   ArrowLeftRight,
 } from "lucide-react";
@@ -25,7 +24,6 @@ import logo from "@/assets/logo.png";
 import { getActiveYear, loadGlobalStudents, loadTeachers } from "@/utils/storage";
 
 const Home = () => {
-  const { signOut, isAdmin } = useAuth();
   const [year, setYear] = useState("");
   const [studentsCount, setStudentsCount] = useState<number | null>(null);
   const [teachersCount, setTeachersCount] = useState<number | null>(null);
@@ -158,14 +156,11 @@ const Home = () => {
                   <ArrowLeftRight className="h-4 w-4" /> تبديل القسم
                 </Button>
               </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-primary-foreground gap-1"
-                onClick={() => void signOut()}
-              >
-                <LogOut className="h-4 w-4" /> خروج
-              </Button>
+              <Link to="/database">
+                <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
+                  <Database className="h-4 w-4" /> قاعدة البيانات
+                </Button>
+              </Link>
             </div>
           </div>
           <div className="text-center">
@@ -216,13 +211,11 @@ const Home = () => {
                 <SettingsIcon className="h-4 w-4" /> الإعدادات
               </Button>
             </Link>
-            {isAdmin && (
-              <Link to="/users">
-                <Button variant="outline" className="gap-1">
-                  <Users className="h-4 w-4" /> إدارة المستخدمين
-                </Button>
-              </Link>
-            )}
+            <Link to="/database">
+              <Button variant="outline" className="gap-1">
+                <Database className="h-4 w-4" /> قاعدة البيانات والنسخ الاحتياطي
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

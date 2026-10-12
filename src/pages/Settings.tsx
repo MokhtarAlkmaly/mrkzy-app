@@ -32,7 +32,8 @@ import {
   UserCog,
   Eye,
   AlertTriangle,
-  Users as UsersIcon,
+  Database,
+  ArrowLeft,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { CustomColumnDef, DEFAULT_STATUSES, START_YEAR, END_YEAR } from "@/types/student";
@@ -412,6 +413,21 @@ const Settings = () => {
               </div>
             )}
 
+            <Link to="/database" className="block">
+              <div className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-primary/20 bg-primary/5 p-4 shadow-sm transition-colors hover:bg-primary/10">
+                <div className="flex items-center gap-3">
+                  <Database className="h-6 w-6 text-primary" />
+                  <div>
+                    <p className="text-sm font-bold">قاعدة البيانات والنسخ الاحتياطي</p>
+                    <p className="text-xs text-muted-foreground">
+                      مجلد البيانات على الهاتف/بطاقة SD، النسخ الاحتياطية، الاستيراد والتصدير.
+                    </p>
+                  </div>
+                </div>
+                <ArrowLeft className="h-4 w-4 text-primary" />
+              </div>
+            </Link>
+
             <div className="space-y-5 rounded-[1.5rem] border border-white/70 bg-card/90 shadow-xl shadow-primary/5 p-5">
               <div>
                 <label className="text-sm font-medium">سنة المسابقة النشطة</label>
@@ -488,9 +504,9 @@ const Settings = () => {
               <div className="flex items-center gap-2">
                 <UserCog className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="text-base font-semibold">الملف الشخصي</p>
+                  <p className="text-base font-semibold">اسم المستخدم</p>
                   <p className="text-xs text-muted-foreground">
-                    الاسم الظاهر في قائمة «إدارة المستخدمين» وعند اطلاع الآخرين على بياناتك.
+                    اسمك كمستخدم لهذا التطبيق على هذا الجهاز (يُحفظ في مجلد قاعدة البيانات).
                   </p>
                 </div>
               </div>
@@ -515,11 +531,9 @@ const Settings = () => {
                   <Save className="h-4 w-4" /> {savingProfile ? "جارٍ الحفظ..." : "حفظ الاسم"}
                 </Button>
               </div>
-              {user?.email && (
-                <p className="text-xs text-muted-foreground">
-                  الحساب: <span dir="ltr">{user.email}</span>
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                لا حسابات ولا تسجيل دخول في هذه النسخة — كل البيانات على هذا الجهاز فقط.
+              </p>
             </div>
 
             {/* ===== حالات الطلاب ===== */}
@@ -763,32 +777,6 @@ const Settings = () => {
                   </Button>
                 </div>
 
-                {/* 4. حذف مستخدمين (للمسؤول) */}
-                {isAdmin && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/70 p-3">
-                    <div>
-                      <div className="text-sm font-semibold">حذف مستخدمين</div>
-                      <div className="text-xs text-muted-foreground">
-                        حذف حسابات مستخدمين وبياناتهم أو الانتقال لصفحة إدارة المستخدمين.
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link to="/users">
-                        <Button variant="outline" size="sm" className="gap-1.5">
-                          <UsersIcon className="h-4 w-4" /> إدارة المستخدمين
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => void openDeleteUsersDialog()}
-                        className="gap-1.5"
-                      >
-                        <Trash2 className="h-4 w-4" /> حذف مستخدمين
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -896,8 +884,8 @@ const Settings = () => {
             </DialogTitle>
             <DialogDescription>
               سيتم حذف جميع الطلاب والطالبات وبيانات كافة الأعوام والمتابعات الشهرية والمعلمين
-              والحلقات والجوائز والشهادات والمصروفات نهائياً من السحابة وهذا الجهاز. هذا الإجراء لا
-              يمكن التراجع عنه.
+              والحلقات والجوائز والشهادات والمصروفات من مجلد قاعدة البيانات. يمكن الرجوع إليها فقط
+              من النسخ الاحتياطية (شاشة «قاعدة البيانات»).
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">

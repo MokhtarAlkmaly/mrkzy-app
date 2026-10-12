@@ -18,6 +18,7 @@ import {
   Settings as SettingsIcon,
   Camera,
   FileText,
+  Database,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import {
@@ -56,7 +57,7 @@ const emptyCounts: Counts = {
 };
 
 const Management = () => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [year, setYear] = useState("");
   const [counts, setCounts] = useState<Counts>(emptyCounts);
   const [loading, setLoading] = useState(true);
@@ -269,13 +270,11 @@ const Management = () => {
                 <SettingsIcon className="h-4 w-4" /> الإعدادات
               </Button>
             </Link>
-            {isAdmin && (
-              <Link to="/users">
-                <Button variant="outline" className="gap-1">
-                  <Users className="h-4 w-4" /> إدارة المستخدمين
-                </Button>
-              </Link>
-            )}
+            <Link to="/database">
+              <Button variant="outline" className="gap-1">
+                <Database className="h-4 w-4" /> قاعدة البيانات والنسخ الاحتياطي
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

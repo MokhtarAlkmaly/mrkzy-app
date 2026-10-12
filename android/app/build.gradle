@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "org.inmaa.msabkarmdan"
+    namespace = "org.inmaa.mrkzynet"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "org.inmaa.msabkarmdan"
+        applicationId "org.inmaa.mrkzynet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -16,7 +16,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        // مفتاح توقيع ثابت للنسخ التجريبية (debug): كل APK يُبنى على GitHub Actions
+        // يُثبَّت فوق النسخة السابقة مباشرة دون حذف التطبيق. للتوزيع الداخلي فقط.
+        debug {
+            storeFile file('mrkzy-debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeType 'pkcs12'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

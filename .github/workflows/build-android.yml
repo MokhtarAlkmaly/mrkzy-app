@@ -1,13 +1,14 @@
-name: بناء تطبيق أندرويد (APK)
+name: بناء تطبيق أندرويد (APK) — نسخة بدون إنترنت
 
 # يبني ملف APK جاهزًا للتثبيت، دون الحاجة لأي جهاز كمبيوتر أو Android Studio.
-# طريقة الاستخدام: ارفع المشروع إلى GitHub، أضف 3 أسرار (Secrets) في إعدادات
-# المستودع، ثم شغّل هذا الـ workflow يدويًا وحمّل الملف الناتج من "Artifacts".
+# هذه النسخة لا تحتاج أي أسرار (Secrets) ولا Supabase: قاعدة البيانات مجلد على الجهاز.
+# طريقة الاستخدام: افتح تبويب Actions، شغّل هذا الـ workflow (أو ادفع تعديلاً إلى main)،
+# ثم حمّل الملف الناتج من قسم "Artifacts" أسفل صفحة التشغيل.
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "arena/**"]
     paths-ignore:
       - "**.md"
 
@@ -35,12 +36,12 @@ jobs:
       - name: فحص الأنواع (TypeScript)
         run: npm run typecheck
 
+      - name: اختبارات قاعدة البيانات المحلية
+        run: npm run test:db
+
       - name: بناء ملفات الويب
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
           CAPACITOR_BUILD: "1"
 
       - name: توليد index.html ثابت من الخادم (لتطبيق أندرويد فقط)
@@ -66,8 +67,11 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
+      - name: تسمية الملف
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk mrkzy-net-offline.apk
+
       - name: رفع ملف APK كمرفق للتحميل
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: mrkzy-net-offline-apk
+          path: mrkzy-net-offline.apk

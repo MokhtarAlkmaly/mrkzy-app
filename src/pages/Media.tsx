@@ -57,8 +57,8 @@ const Media = () => {
     setLoading(true);
     const items = (await loadMediaMetadata(selectedYear)) as MediaItem[];
     setMediaItems(items);
-    // Generate signed URLs for all cached metadata items.
-    if (items.length > 0 && navigator.onLine) {
+    // روابط عرض محلية للملفات المحفوظة في مجلد media داخل مجلد قاعدة البيانات.
+    if (items.length > 0) {
       const paths = items.map((i) => i.file_path);
       const { data: signed } = await supabase.storage.from("media").createSignedUrls(paths, 3600);
       const map: Record<string, string> = {};
@@ -99,12 +99,13 @@ const Media = () => {
       const currentMonth = parseInt(hijriDate) || 1;
 
       const ext = file.name.split(".").pop();
-      const filePath = `${user.id}/${selectedYear}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      // يُحفظ الملف داخل مجلد قاعدة البيانات: media/<العام>/<اسم فريد>
+      const filePath = `${selectedYear}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
 
       const { error: uploadError } = await supabase.storage.from("media").upload(filePath, file);
       if (uploadError) {
         console.error(uploadError);
-        toast({ title: "خطأ في الرفع", description: uploadError.message, variant: "destructive" });
+        toast({ title: "تعذّر حفظ الملف", description: uploadError.message, variant: "destructive" });
         continue;
       }
 
@@ -120,14 +121,14 @@ const Media = () => {
 
     setUploading(false);
     await loadMedia();
-    toast({ title: "تم الرفع", description: `تم رفع ${files.length} ملف بنجاح` });
+    toast({ title: "تم الحفظ", description: `حُفظ ${files.length} ملف في مجلد قاعدة البيانات` });
     e.target.value = "";
   };
 
   const handleDelete = async (item: MediaItem) => {
     if (!confirm("هل أنت متأكد من حذف هذا الملف؟")) return;
 
-    if (navigator.onLine && user) {
+    if (user) {
       await supabase.storage.from("media").remove([item.file_path]);
     }
     await deleteMediaMetadataLocal(item.id);

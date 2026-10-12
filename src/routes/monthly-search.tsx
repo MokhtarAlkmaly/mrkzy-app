@@ -1,15 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import MonthlyTrackingSearch from "@/pages/MonthlyTrackingSearch";
-import { useLocalDatabase } from "@/hooks/useLocalDatabase";
+import { requireDatabase } from "@/offline/routeGuard";
 
-// مسار عام (بدون تسجيل دخول) لكنه يقرأ من قاعدة البيانات المحلية،
-// لذا يهيّئها بنفسه بدل الاعتماد على الجذر.
-function MonthlySearchPage() {
-  useLocalDatabase();
-  return <MonthlyTrackingSearch />;
-}
-
+// يقرأ من قاعدة بيانات المجلد المحلية، لذا يتأكد من فتحها أولاً.
 export const Route = createFileRoute("/monthly-search")({
+  ssr: false,
+  beforeLoad: async ({ location }) => {
+    await requireDatabase(location);
+  },
   head: () => ({
     meta: [
       { title: "بحث المتابعة الشهرية - مركز إنماء الأهلي الخيري" },
@@ -23,5 +21,5 @@ export const Route = createFileRoute("/monthly-search")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: MonthlySearchPage,
+  component: MonthlyTrackingSearch,
 });

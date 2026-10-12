@@ -304,14 +304,14 @@ export const deletePortal = async (userId: string, id: string): Promise<void> =>
   if (error) throw error;
 };
 
-/** رابط المعلم/ة الكامل (يُرسل لها على واتساب). */
+/**
+ * مسار بوابة المعلم/ة داخل التطبيق. في النسخة التي تعمل بدون إنترنت تُفتح
+ * البوابة على نفس الجهاز، لذا يُعاد مسار نسبي افتراضياً.
+ */
 export const getPortalLink = (
   portal: Pick<TeacherPortal, "code" | "year" | "month">,
-  origin?: string,
-): string => {
-  const base = origin ?? (typeof window !== "undefined" ? window.location.origin : "");
-  return `${base}/teacher?t=${portal.code}&y=${portal.year}&m=${portal.month}`;
-};
+  origin = "",
+): string => `${origin}/teacher?t=${portal.code}&y=${portal.year}&m=${portal.month}`;
 
 // ============================================================
 // فتح البوابة (المعلم/ة — دون تسجيل دخول)

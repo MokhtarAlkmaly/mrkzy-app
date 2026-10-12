@@ -1,10 +1,14 @@
 /**
- * طبقة التعامل مع المستخدمين والأدوار وأذونات الاطلاع على بيانات المسؤول.
- * تعتمد على الجداول والدوال المعرّفة في:
- *   supabase/migrations/20260916120000_user_management_and_data_sharing.sql
+ * المستخدمون والأدوار ومشاركة البيانات — خاصة بالنسخة السحابية.
+ *
+ * في النسخة التي تعمل بدون إنترنت يوجد مستخدم محلي واحد على الجهاز، فلا
+ * إدارة مستخدمين ولا أذونات اطلاع. أُبقيت الدوال بنفس التوقيعات: القراءة
+ * تعيد المستخدم المحلي، والعمليات الإدارية ترمي خطأً واضحاً.
+ * الاسم الظاهر يُحفظ في جدول profiles داخل مجلد قاعدة البيانات.
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { LOCAL_USER_EMAIL, LOCAL_USER_ID } from "@/offline/constants";
+import { db } from "@/offline/dbManager";
 
 export interface AppUser {
   id: string;
@@ -33,191 +37,73 @@ export interface SharedOwner {
   access_level: "read" | "write";
 }
 
-/**
- * الجداول والدوال الجديدة غير موجودة في الأنواع المولَّدة
- * (src/integrations/supabase/types.ts)، لذا نستعمل عميلاً غير مُقيَّد بالأنواع
- * لهذه الاستدعاءات فقط، مع الحفاظ على أنواع صريحة للمخرجات.
- */
-type QueryResult = Promise<{ data: unknown; error: unknown }>;
-type FilterBuilder = QueryResult & {
-  eq: (column: string, value: string) => FilterBuilder;
-  maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
-};
+const NOT_AVAILABLE = "إدارة المستخدمين غير متاحة في النسخة التي تعمل بدون إنترنت (مستخدم واحد).";
 
-type UntypedClient = {
-  rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-  from: (table: string) => {
-    select: (columns: string) => FilterBuilder;
-    upsert: (
-      values: Record<string, unknown>,
-      options?: Record<string, unknown>,
-    ) => Promise<{ error: unknown }>;
-    update: (values: Record<string, unknown>) => {
-      eq: (column: string, value: string) => Promise<{ error: unknown }>;
-    };
-    delete: () => FilterBuilder;
+const localProfile = (): UserProfile => {
+  const row = db.isOpen()
+    ? db.rowsRef("profiles").find((p) => p.id === LOCAL_USER_ID)
+    : undefined;
+  return {
+    id: LOCAL_USER_ID,
+    email: (row?.email as string | null) ?? LOCAL_USER_EMAIL,
+    display_name: (row?.display_name as string | null) ?? null,
+    created_at: (row?.created_at as string) ?? new Date().toISOString(),
   };
 };
 
-const db = supabase as unknown as UntypedClient;
+/** لا يوجد مسؤول في النسخة المحلية. */
+export const checkIsAdmin = async (): Promise<boolean> => false;
 
-/** هل الحساب الحالي مسؤول؟ */
-export const checkIsAdmin = async (): Promise<boolean> => {
-  const { data, error } = await db.rpc("is_admin");
-  if (error) {
-    console.error("تعذّر التحقق من صلاحية المسؤول:", error);
-    return false;
-  }
-  return data === true;
-};
-
-/** قائمة كل المستخدمين — للمسؤول فقط. */
+/** المستخدم الوحيد: المستخدم المحلي. */
 export const listAllUsers = async (): Promise<AppUser[]> => {
-  const { data, error } = await db.rpc("admin_list_users");
-  if (error) throw error;
-  return (data || []) as AppUser[];
+  const profile = localProfile();
+  return [
+    {
+      ...profile,
+      is_admin: false,
+      students_count: db.isOpen() ? db.rowsRef("students").length : 0,
+      granted: false,
+      access_level: null,
+    },
+  ];
 };
 
-/** منح مستخدم إذن الاطلاع على بيانات الحساب الحالي. */
 export const grantAccess = async (
-  granteeId: string,
-  accessLevel: "read" | "write" = "read",
+  _granteeId: string,
+  _accessLevel: "read" | "write" = "read",
 ): Promise<void> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const ownerId = auth.user?.id;
-  if (!ownerId) throw new Error("لا توجد جلسة مستخدم");
-  if (ownerId === granteeId) throw new Error("لا يمكنك منح نفسك إذناً");
-
-  const { error } = await db
-    .from("data_access_grants")
-    .upsert(
-      { owner_id: ownerId, grantee_id: granteeId, access_level: accessLevel },
-      { onConflict: "owner_id,grantee_id" },
-    );
-  if (error) throw error;
+  throw new Error(NOT_AVAILABLE);
 };
 
-/** سحب إذن الاطلاع من مستخدم. */
-export const revokeAccess = async (granteeId: string): Promise<void> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const ownerId = auth.user?.id;
-  if (!ownerId) throw new Error("لا توجد جلسة مستخدم");
-
-  const { error } = await db
-    .from("data_access_grants")
-    .delete()
-    .eq("owner_id", ownerId)
-    .eq("grantee_id", granteeId);
-  if (error) throw error;
+export const revokeAccess = async (_granteeId: string): Promise<void> => {
+  throw new Error(NOT_AVAILABLE);
 };
 
-/** ترقية مستخدم إلى مسؤول أو إنزاله. */
-export const setUserRole = async (userId: string, makeAdmin: boolean): Promise<void> => {
-  const { error } = await db.rpc("admin_set_role", {
-    _user_id: userId,
-    _make_admin: makeAdmin,
-  });
-  if (error) throw error;
+export const setUserRole = async (_userId: string, _makeAdmin: boolean): Promise<void> => {
+  throw new Error(NOT_AVAILABLE);
 };
 
-/** حذف مستخدم وكل بياناته وصلاحياته — للمسؤول فقط. */
-export const deleteUser = async (userId: string): Promise<void> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
-  if (!me) throw new Error("لا توجد جلسة مستخدم");
-  if (me === userId) throw new Error("لا يمكنك حذف حسابك أنت");
-
-  const { error } = await db.rpc("admin_delete_user", { _user_id: userId });
-  if (!error) return;
-
-  const errObj = (error ?? {}) as { code?: unknown; message?: unknown };
-  const code = typeof errObj.code === "string" ? errObj.code : "";
-  const message = typeof errObj.message === "string" ? errObj.message : "";
-  const isMissingFn =
-    code === "PGRST202" || code === "42883" || message.includes("admin_delete_user");
-  if (!isMissingFn) throw error;
-
-  await db.from("data_access_grants").delete().eq("owner_id", userId);
-  await db.from("data_access_grants").delete().eq("grantee_id", userId);
-  await db.from("user_roles").delete().eq("user_id", userId);
-  const { error: profileErr } = await db.from("profiles").delete().eq("id", userId);
-  if (profileErr) throw profileErr;
+export const deleteUser = async (_userId: string): Promise<void> => {
+  throw new Error(NOT_AVAILABLE);
 };
 
-/** حذف عدة مستخدمين دفعة واحدة — للمسؤول فقط. */
-export const deleteUsers = async (userIds: string[]): Promise<number> => {
-  const unique = Array.from(new Set(userIds)).filter(Boolean);
-  let count = 0;
-  for (const id of unique) {
-    await deleteUser(id);
-    count++;
-  }
-  return count;
+export const deleteUsers = async (_userIds: string[]): Promise<number> => {
+  throw new Error(NOT_AVAILABLE);
 };
 
-/**
- * الحسابات التي منحت المستخدم الحالي إذن الاطلاع على بياناتها.
- * تُستعمل لعرض زر "الاطلاع على بيانات المسؤول".
- */
-export const listSharedWithMe = async (): Promise<SharedOwner[]> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
-  if (!me) return [];
+/** لا مشاركة بيانات في النسخة المحلية. */
+export const listSharedWithMe = async (): Promise<SharedOwner[]> => [];
 
-  const { data, error } = await db
-    .from("data_access_grants")
-    .select(
-      "owner_id, access_level, profiles!data_access_grants_owner_id_fkey(display_name, email)",
-    )
-    .eq("grantee_id", me);
+/** الملف الشخصي المحلي. */
+export const getMyProfile = async (): Promise<UserProfile | null> => localProfile();
 
-  if (error) {
-    console.error("تعذّر جلب أذونات الاطلاع:", error);
-    return [];
-  }
-
-  type GrantRow = {
-    owner_id: string;
-    access_level: "read" | "write";
-    profiles?: { display_name: string | null; email: string | null } | null;
-  };
-
-  return ((data as GrantRow[]) || []).map((row) => ({
-    owner_id: row.owner_id,
-    access_level: row.access_level,
-    name: row.profiles?.display_name || row.profiles?.email || "المسؤول",
-    email: row.profiles?.email ?? null,
-  }));
-};
-
-/** ملف الحساب الحالي. */
-export const getMyProfile = async (): Promise<UserProfile | null> => {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
-  if (!me) return null;
-
-  const { data, error } = await db
-    .from("profiles")
-    .select("id,email,display_name,created_at")
-    .eq("id", me)
-    .maybeSingle();
-  if (error) throw error;
-  return (data as UserProfile | null) ?? null;
-};
-
-/** تحديث الاسم الظاهر للحساب الحالي. */
+/** تحديث الاسم الظاهر (يُحفظ في مجلد قاعدة البيانات). */
 export const updateMyDisplayName = async (name: string): Promise<void> => {
   const trimmed = name.trim();
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
-  if (!me) throw new Error("لا توجد جلسة مستخدم");
-
-  const { error } = await db.from("profiles").update({ display_name: trimmed }).eq("id", me);
-  if (error) throw error;
-
-  // حدّث بيانات Auth أيضاً حتى يظهر الاسم الجديد في الجلسات والأجهزة الحديثة.
-  const { error: authError } = await supabase.auth.updateUser({
-    data: { display_name: trimmed },
-  });
-  if (authError) console.warn("تم تحديث الملف الشخصي، لكن تعذّر تحديث بيانات الجلسة:", authError);
+  db.upsertRows(
+    "profiles",
+    [{ id: LOCAL_USER_ID, display_name: trimmed, email: LOCAL_USER_EMAIL }],
+    ["id"],
+  );
+  await db.flush();
 };

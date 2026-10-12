@@ -37,7 +37,7 @@ import {
   CalendarDays,
   GraduationCap,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { LogoBadge } from "@/components/LogoBadge";
 import { Student, HifzHistory, YearData, START_YEAR, END_YEAR } from "@/types/student";
 import {
   loadAllStudentsWithData,
@@ -554,13 +554,12 @@ const Index = () => {
         <div className="container relative z-10 mx-auto max-w-7xl">
           <div className="flex flex-col gap-5 py-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-3xl bg-white/95 p-2 shadow-xl shadow-black/10 ring-1 ring-white/40">
-                <img
-                  src={logo}
-                  alt="مركز إنماء الأهلي الخيري"
-                  className="h-16 w-16 object-contain sm:h-20 sm:w-20 print:h-16 print:w-16"
-                />
-              </div>
+              <LogoBadge
+                size="lg"
+                goldRing
+                alt="مركز إنماء الأهلي الخيري"
+                className="print:h-16 print:w-16"
+              />
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs text-white/90 ring-1 ring-white/15">
                   <Sparkles className="h-3.5 w-3.5 text-islamic-gold" />

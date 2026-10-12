@@ -3,7 +3,7 @@ import { useArabicDates } from "@/hooks/useArabicDates";
 import { useSignOut } from "@/hooks/useSignOut";
 import { Button } from "@/components/ui/button";
 import { BookOpenText, CalendarDays, Scissors, LogOut } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { LogoBadge } from "@/components/LogoBadge";
 import { CENTER_NAME, QURAN_DEPARTMENT_NAME, TRAINING_DEPARTMENT_NAME } from "@/utils/centerInfo";
 
 const DepartmentSelect = () => {
@@ -26,7 +26,7 @@ const DepartmentSelect = () => {
         </Button>
       </div>
 
-      <img src={logo} alt={CENTER_NAME} className="h-24 w-auto mb-4" />
+      <LogoBadge size="xl" goldRing alt={CENTER_NAME} className="mb-4" />
       <h1 className="text-2xl sm:text-3xl font-black text-center">{CENTER_NAME}</h1>
       <p className="text-muted-foreground mt-2 text-center">اختر القسم الذي تريد إدارته</p>
 

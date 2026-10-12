@@ -75,8 +75,16 @@ try {
 
   check("اسم المركز ظاهر في الترويسة", html.includes("مركز إنماء الأهلي الخيري"));
   check(
-    "اسم المركز بحجم كبير (h1 مع text-2xl و sm:text-3xl)",
-    /<h1[^>]*text-2xl[^>]*sm:text-3xl/.test(html) && /<h1[^>]*font-black/.test(html),
+    "اسم المركز بحجم كبير وسائل يتدرّج مع كل الشاشات (h1 مع clamp)",
+    /<h1[^>]*text-\[clamp\([^)]*vw[^)]*\)\]/.test(html) && /<h1[^>]*font-black/.test(html),
+  );
+  check(
+    "الشعار داخل إطار أبيض (دائرة أو مربع بزوايا دائرية)",
+    /<div[^>]*bg-white[^>]*(rounded-full|rounded-\[\d+%\])[^>]*>[\s\S]*?<img/.test(html),
+  );
+  check(
+    "مكان الشعار ثابت في وسط الصف الأعلى (عمود auto بين طرفين مرنين)",
+    html.includes("grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"),
   );
   check(
     "عنوان الصفحة أسفل الاسم داخل h2",

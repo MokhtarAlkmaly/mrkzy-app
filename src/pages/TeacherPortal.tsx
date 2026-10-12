@@ -26,7 +26,7 @@ import { useSearchParams } from "@/lib/router-compat";
 import { calcPagesBetweenAsync } from "@/utils/quranData";
 import { formatYearKey } from "@/types/student";
 import { TRACKING_MONTHS } from "@/types/student";
-import logo from "@/assets/logo.png";
+import { LogoBadge } from "@/components/LogoBadge";
 import {
   PortalView,
   PortalForm,
@@ -371,9 +371,7 @@ const TeacherPortal = () => {
       {/* الترويسة */}
       <header className="border-b border-white/10 bg-emerald-950/60 px-4 py-4">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <div className="rounded-2xl bg-white/95 p-1.5 shadow-lg ring-2 ring-amber-400/30">
-            <img src={logo} alt="مركز إنماء الأهلي الخيري" className="h-11 w-11 object-contain" />
-          </div>
+          <LogoBadge size="sm" goldRing alt="مركز إنماء الأهلي الخيري" />
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
               <Link2 className="h-3 w-3" />

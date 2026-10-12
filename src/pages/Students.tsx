@@ -68,7 +68,6 @@ import {
 } from "@/types/student";
 import {
   loadAllStudentsAllYears,
-  loadTeachers,
   getActiveYear,
   saveStudent,
   deleteStudent,
@@ -103,7 +102,6 @@ const NONE_VALUE = "__none__";
 /** كل حقول ملف الطالب/ة التفصيلية بصيغة نصية (مناسبة لنماذج الإدخال). */
 type ProfileForm = {
   name: string;
-  teacher: string;
   gender: string;
   hijri_join_date: string;
   initial_hifz: string;
@@ -118,7 +116,6 @@ type ProfileForm = {
 
 const emptyForm = (): ProfileForm => ({
   name: "",
-  teacher: "",
   gender: "",
   hijri_join_date: "",
   initial_hifz: "",
@@ -133,7 +130,6 @@ const emptyForm = (): ProfileForm => ({
 
 const formFromStudent = (s: Student): ProfileForm => ({
   name: s.name || "",
-  teacher: s.teacher || "",
   gender: s.gender || "",
   hijri_join_date: s.hijri_join_date || "",
   initial_hifz: s.initial_hifz || "",
@@ -166,7 +162,6 @@ type StudentSortField =
   | "name"
   | "gender"
   | "school_grade"
-  | "teacher"
   | "status"
   | "hijri_join_date"
   | "years"
@@ -201,11 +196,9 @@ const Students = () => {
   const readOnly = !!viewAs;
 
   const [students, setStudents] = useState<StudentAllYears[]>([]);
-  const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[]>(DEFAULT_STATUSES);
   const [customColumns, setCustomColumns] = useState<CustomColumnDef[]>([]);
   const [query, setQuery] = useState("");
-  const [teacherFilter, setTeacherFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
   const [gradeFilter, setGradeFilter] = useState(ALL_GRADES_VALUE);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -232,21 +225,14 @@ const Students = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [list, registered, loadedStatuses, loadedColumns] = await Promise.all([
+    const [list, loadedStatuses, loadedColumns] = await Promise.all([
       loadAllStudentsAllYears(),
-      loadTeachers(await getActiveYear()),
       loadStudentStatuses().catch(() => DEFAULT_STATUSES),
       loadCustomColumns().catch(() => [] as CustomColumnDef[]),
     ]);
     setStudents(list);
     setStatuses(loadedStatuses);
     setCustomColumns(loadedColumns);
-    const set = new Set<string>(registered.map((r) => r.name));
-    list.forEach((s) => {
-      const t = (s.teacher || "").trim();
-      if (t) set.add(t);
-    });
-    setTeacherNames(Array.from(set).sort((a, b) => a.localeCompare(b, "ar")));
     setLoading(false);
   }, []);
 
@@ -276,14 +262,12 @@ const Students = () => {
   const filtered = useMemo(() => {
     const q = query.trim().replace(/\s+/g, " ");
     const base = students
-      .filter((s) => (teacherFilter === "all" ? true : (s.teacher || "").trim() === teacherFilter))
       .filter((s) => (genderFilter === "all" ? true : (s.gender || "") === genderFilter))
       .filter((s) => (statusFilter === "all" ? true : (s.status || "طبيعي") === statusFilter))
       .filter((s) => matchesSchoolGrade(s.school_grade, gradeFilter))
       .filter((s) =>
         q
           ? (s.name || "").includes(q) ||
-            (s.teacher || "").includes(q) ||
             (s.guardian_phone || "").includes(q) ||
             (s.student_phone || "").includes(q)
           : true,
@@ -313,9 +297,6 @@ const Students = () => {
         case "school_grade":
           cmp = (a.school_grade || "").localeCompare(b.school_grade || "", "ar");
           break;
-        case "teacher":
-          cmp = (a.teacher || "").localeCompare(b.teacher || "", "ar");
-          break;
         case "status":
           cmp = (a.status || "طبيعي").localeCompare(b.status || "طبيعي", "ar");
           break;
@@ -342,7 +323,7 @@ const Students = () => {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [students, query, teacherFilter, genderFilter, statusFilter, gradeFilter, sortField, sortDir]);
+  }, [students, query, genderFilter, statusFilter, gradeFilter, sortField, sortDir]);
 
   const handleSort = (field: StudentSortField) => {
     if (sortField !== field) {
@@ -447,14 +428,12 @@ const Students = () => {
   };
 
   const hasActiveFilters =
-    teacherFilter !== "all" ||
     genderFilter !== "all" ||
     statusFilter !== "all" ||
     gradeFilter !== ALL_GRADES_VALUE ||
     query.trim() !== "";
 
   const resetFilters = () => {
-    setTeacherFilter("all");
     setGenderFilter("all");
     setStatusFilter("all");
     setGradeFilter(ALL_GRADES_VALUE);
@@ -471,7 +450,6 @@ const Students = () => {
           <td style="text-align:right;font-weight:bold;">${s.name || "—"}</td>
           <td>${s.gender || "—"}</td>
           <td>${s.school_grade || "—"}</td>
-          <td>${s.teacher || "—"}</td>
           <td>${s.status || "طبيعي"}</td>
           <td>${s.hijri_join_date || "—"}</td>
           <td>${(s.years || []).map((y) => `${y}هـ`).join("، ") || "—"}</td>
@@ -515,7 +493,6 @@ const Students = () => {
                 <th>الاسم</th>
                 <th>الجنس</th>
                 <th>السنة الدراسية</th>
-                <th>المعلم/المعلمة</th>
                 <th>الحالة</th>
                 <th>تاريخ الالتحاق</th>
                 <th>سنوات التسجيل</th>
@@ -528,7 +505,7 @@ const Students = () => {
             <tbody>${rowsHtml}</tbody>
             <tfoot>
               <tr>
-                <td colspan="8">الإجمالي (${filtered.length} طالب/طالبة)</td>
+                <td colspan="7">الإجمالي (${filtered.length} طالب/طالبة)</td>
                 <td>${summaryStats.totalParts}</td>
                 <td>متوسط: ${summaryStats.avgScore}</td>
                 <td colspan="2">خاتمون: ${summaryStats.khatimCount}</td>
@@ -570,15 +547,15 @@ const Students = () => {
     }
     setSaving(true);
     try {
-      const teacher = form.teacher.trim();
       const profile = formToProfile(form);
       if (editingId) {
-        await saveStudent({ id: editingId, name, teacher, ...profile });
+        // لا يغيّر السجل الرئيسي ارتباطات المعلمين التي تُدار في الحلقات والأعوام.
+        await saveStudent({ id: editingId, name, ...profile });
         toast({ title: "تم تعديل بيانات الطالب/الطالبة" });
       } else {
-        const newId = await saveStudent({ name, teacher, ...profile });
+        const newId = await saveStudent({ name, ...profile });
         if (newId) {
-          await registerStudentInYear(registerYear, newId, teacher);
+          await registerStudentInYear(registerYear, newId);
         }
         toast({
           title: "تمت الإضافة",
@@ -684,7 +661,6 @@ const Students = () => {
       const rows = filtered.map((s) => {
         const row: Record<string, string> = {
           الاسم: s.name || "",
-          "المعلم/المعلمة": s.teacher || "",
           الجنس: s.gender || "",
           "السنة الدراسية": s.school_grade || "",
           الحالة: s.status || "",
@@ -766,9 +742,7 @@ const Students = () => {
                 {summaryStats.femaleCount} أنثى
               </span>
             </div>
-            <div className="mt-0.5 text-[11px] text-muted-foreground">
-              {teacherNames.length} معلم/معلمة في السجل
-            </div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">حسب السجلات المعروضة</div>
           </div>
 
           <div className="rounded-2xl border border-white/70 bg-card/90 p-3.5 shadow-lg shadow-primary/5">
@@ -837,20 +811,6 @@ const Students = () => {
 
         {/* أدوات البحث والتصفية والإضافة */}
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={teacherFilter} onValueChange={setTeacherFilter}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="كل المعلمين والمعلمات" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل المعلمين والمعلمات</SelectItem>
-              {teacherNames.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={gradeFilter} onValueChange={setGradeFilter}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="كل السنوات الدراسية" />
@@ -899,7 +859,7 @@ const Students = () => {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث بالاسم أو المعلم أو رقم الهاتف..."
+              placeholder="ابحث بالاسم أو رقم الهاتف..."
               className="pr-9"
             />
           </div>
@@ -1020,7 +980,7 @@ const Students = () => {
             </div>
 
             <div className="table-scroll max-h-[60vh] overflow-auto md:max-h-[72vh]">
-              <table className="w-full min-w-[1220px] border-separate border-spacing-0 text-sm">
+              <table className="w-full min-w-[1100px] border-separate border-spacing-0 text-sm">
                 <thead className="sticky top-0 z-20 bg-gradient-to-l from-primary via-emerald-700 to-teal-800 text-primary-foreground shadow-md">
                   <tr>
                     <th className="sticky right-0 z-30 w-11 border-b border-l border-white/15 bg-primary px-2 py-3 text-center">
@@ -1060,15 +1020,6 @@ const Students = () => {
                       <div className="flex items-center justify-between gap-1">
                         <span>السنة الدراسية</span>
                         {renderSortIcon("school_grade")}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSort("teacher")}
-                      className="min-w-[155px] cursor-pointer select-none border-b border-l border-white/15 px-3 py-3 text-right font-bold transition-colors hover:bg-white/10"
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span>المعلم / المعلمة</span>
-                        {renderSortIcon("teacher")}
                       </div>
                     </th>
                     <th
@@ -1231,15 +1182,6 @@ const Students = () => {
                           {s.school_grade ? (
                             <span className="inline-flex rounded-lg bg-secondary/70 px-2 py-0.5 text-xs font-semibold text-foreground">
                               {s.school_grade}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="border-b border-l border-border/60 px-3 py-2.5">
-                          {s.teacher ? (
-                            <span className="font-semibold text-emerald-900 dark:text-emerald-200">
-                              {s.teacher}
                             </span>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
@@ -1418,7 +1360,7 @@ const Students = () => {
                 <tfoot className="sticky bottom-0 z-10 bg-gradient-to-l from-secondary via-secondary/95 to-background font-bold text-foreground shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={8}
                       className="border-t-2 border-l border-primary/30 px-4 py-2.5 text-right text-xs sm:text-sm"
                     >
                       خلاصة الكشف المعروض:{" "}
@@ -1481,34 +1423,6 @@ const Students = () => {
                     </p>
                   );
                 })()}
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">المعلم/المعلمة</label>
-                {teacherNames.length > 0 ? (
-                  <Select
-                    value={form.teacher || NONE_VALUE}
-                    onValueChange={(v) => setForm({ ...form, teacher: v === NONE_VALUE ? "" : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر المعلم/المعلمة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE_VALUE}>— بدون —</SelectItem>
-                      {teacherNames.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={form.teacher}
-                    onChange={(e) => setForm({ ...form, teacher: e.target.value })}
-                    placeholder="اسم المعلم/المعلمة"
-                  />
-                )}
               </div>
 
               <div>

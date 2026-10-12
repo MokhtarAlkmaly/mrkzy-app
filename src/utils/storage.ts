@@ -798,7 +798,7 @@ export const saveStudent = async (
   student: {
     id?: number;
     name: string;
-    teacher: string;
+    teacher?: string;
   } & StudentProfileValues,
 ): Promise<number | null> => {
   guardWrite();
@@ -807,18 +807,20 @@ export const saveStudent = async (
 
   // الحقول غير الممرَّرة تبقى كما هي في الكاش (تعديل جزئي لا يمسح باقي الملف).
   const existingRow = student.id
-    ? ((await getCachedStudents()).find((s) => s.id === student.id) ?? {})
-    : {};
+    ? (await getCachedStudents()).find((s) => s.id === student.id)
+    : undefined;
   const profile = {
-    ...pickProfileFields(existingRow as unknown as Record<string, unknown>),
+    ...pickProfileFields((existingRow ?? {}) as unknown as Record<string, unknown>),
     ...pickProfileFields(student as unknown as Record<string, unknown>),
   };
+  // عدم إرسال المعلم يحفظ الارتباط الموجود؛ الطالب الجديد يبدأ دون معلم.
+  const teacher = student.teacher ?? existingRow?.teacher ?? "";
 
   if (student.id) {
     await putCachedStudent({
       id: student.id,
       name: student.name,
-      teacher: student.teacher,
+      teacher,
       user_id: userId,
       ...profile,
     });
@@ -834,7 +836,7 @@ export const saveStudent = async (
     await putCachedStudent({
       id: newId,
       name: student.name,
-      teacher: student.teacher,
+      teacher,
       user_id: userId,
       ...profile,
     });

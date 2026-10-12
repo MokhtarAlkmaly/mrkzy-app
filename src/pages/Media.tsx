@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,10 +10,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Upload, Trash2, Image, Video, X } from "lucide-react";
-import { Link } from "@/lib/router-compat";
+import { Upload, Trash2, Image, Video, X } from "lucide-react";
 import { START_YEAR, END_YEAR } from "@/types/student";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { CenterHeader } from "@/components/CenterHeader";
 import { loadMediaMetadata, saveMediaMetadata, deleteMediaMetadataLocal } from "@/utils/storage";
 
 const HIJRI_MONTHS = [
@@ -153,17 +153,12 @@ const Media = () => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="container mx-auto flex max-w-7xl items-center justify-between">
-          <h1 className="text-xl font-bold">📸 الصور والفيديوهات</h1>
-          <Link to="/quran">
-            <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
-              <ArrowRight className="h-4 w-4" />
-              العودة للرئيسية
-            </Button>
-          </Link>
-        </div>
-      </header>
+      <CenterHeader
+        title="الصور والفيديوهات"
+        icon={Image}
+        backTo="/quran"
+        backLabel="العودة للرئيسية"
+      />
 
       <div className="container mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-7 space-y-6">
         {/* Controls */}

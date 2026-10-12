@@ -39,6 +39,12 @@ jobs:
       - name: اختبارات ترحيلات قاعدة البيانات
         run: npm run test:sql
 
+      - name: اختبارات التواريخ (توقيت اليمن)
+        run: npm run test:dates
+
+      - name: فحوص الترويسة الموحّدة
+        run: npm run test:header
+
       - name: بناء الويب
         run: npm run build
         env:

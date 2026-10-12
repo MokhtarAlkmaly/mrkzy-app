@@ -29,7 +29,7 @@ import {
   Link as LinkIcon,
   Trash2,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { CenterHeader } from "@/components/CenterHeader";
 import {
   listAllUsers,
   grantAccess,
@@ -299,27 +299,12 @@ const Users = () => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="container mx-auto max-w-7xl">
-          <div className="mb-4 flex items-center justify-between">
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="gap-1 text-primary-foreground">
-                <ArrowRight className="h-4 w-4" /> رجوع
-              </Button>
-            </Link>
-            <img src={logo} alt="الشعار" className="h-16 w-auto" />
-            <div className="w-20" />
-          </div>
-          <div className="text-center">
-            <h1 className="flex items-center justify-center gap-2 text-2xl font-bold">
-              <UsersIcon className="h-6 w-6" /> إدارة المستخدمين
-            </h1>
-            <p className="mt-1 text-sm opacity-90">
-              كل مستخدم له بياناته الخاصة — وأنت تتحكم بمن يرى بياناتك
-            </p>
-          </div>
-        </div>
-      </header>
+      <CenterHeader
+        title="إدارة المستخدمين"
+        icon={UsersIcon}
+        backTo="/"
+        subtitle="كل مستخدم له بياناته الخاصة — وأنت تتحكم بمن يرى بياناتك"
+      />
 
       <div className="container mx-auto max-w-7xl space-y-4 px-3 py-5 sm:px-4 sm:py-7">
         {/* بطاقات إحصائية */}

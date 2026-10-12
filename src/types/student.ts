@@ -34,7 +34,7 @@ export interface Student {
   initial_hifz?: string; // مقدار الحفظ قبل الالتحاق
   first_competition_year?: string; // عام أول مسابقة
   status?: string; // الحالة: يتيم، معوق، مسكين، طبيعي، أو حالة مخصصة
-  school_grade?: string; // السنة الدراسية وقت الالتحاق
+  school_grade?: string; // الصف الدراسي وقت الالتحاق
   guardian_phone?: string; // رقم ولي الأمر
   student_phone?: string; // رقم الطالب/ة
   custom_fields?: Record<string, string>; // بيانات الأعمدة المخصصة

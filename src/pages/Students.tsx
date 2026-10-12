@@ -68,19 +68,17 @@ import {
 } from "@/types/student";
 import {
   loadAllStudentsAllYears,
-  getActiveYear,
   saveStudent,
   deleteStudent,
   deleteStudents,
   deleteDuplicateStudents,
-  deleteYearData,
   deleteAllData,
-  registerStudentInYear,
   loadCustomColumns,
   loadStudentStatuses,
   type StudentAllYears,
   type StudentProfileValues,
 } from "@/utils/storage";
+import { CenterHeader } from "@/components/CenterHeader";
 import { setPendingStudentLink } from "@/utils/studentLink";
 import {
   getDuplicateNameCounts,
@@ -96,6 +94,7 @@ import {
   matchesSchoolGrade,
 } from "@/utils/schoolGrades";
 import { loadXLSX, saveWorkbook } from "@/utils/excel";
+import { getArabicDateParts } from "@/utils/hijriDates";
 
 const NONE_VALUE = "__none__";
 
@@ -159,15 +158,7 @@ const formToProfile = (form: ProfileForm): StudentProfileValues => ({
 const YEARS = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i);
 
 type StudentSortField =
-  | "name"
-  | "gender"
-  | "school_grade"
-  | "status"
-  | "hijri_join_date"
-  | "years"
-  | "parts"
-  | "total"
-  | "grade";
+  "name" | "gender" | "school_grade" | "status" | "hijri_join_date" | "parts" | "total" | "grade";
 type SortDir = "asc" | "desc" | null;
 
 const GRADE_BADGE_STYLES: Record<string, string> = {
@@ -208,13 +199,8 @@ const Students = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm());
-  const [registerYear, setRegisterYear] = useState("");
   const [dedupDialogOpen, setDedupDialogOpen] = useState(false);
   const [deduping, setDeduping] = useState(false);
-  const [deleteYearDialogOpen, setDeleteYearDialogOpen] = useState(false);
-  const [yearToDelete, setYearToDelete] = useState("");
-  const [deleteOrphanStudents, setDeleteOrphanStudents] = useState(false);
-  const [deletingYear, setDeletingYear] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [sortField, setSortField] = useState<StudentSortField | null>(null);
@@ -236,13 +222,11 @@ const Students = () => {
     setLoading(false);
   }, []);
 
+  // ملاحظة: السجل الرئيسي للطلاب شامل لكل الأعوام — الإضافة هنا لا تربط الطالب/ة
+  // بأي عام، ولا يتم تسجيله تلقائياً في العام النشط. ربط الطالب/ة بالمعلم/ة
+  // وبالعام يتم من صفحات الأعوام (الحلقات والمتابعة الشهرية) كما هو مطلوب.
   useEffect(() => {
     void load();
-    void (async () => {
-      const y = await getActiveYear();
-      setRegisterYear(y);
-      setYearToDelete(y);
-    })();
   }, [load]);
 
   /** عدد مرات تكرار كل اسم (بعد التطبيع العربي) — لكشف الإدخال المزدوج. */
@@ -253,7 +237,7 @@ const Students = () => {
   );
   const extraDuplicatesCount = useMemo(() => getExtraDuplicateRecordsCount(students), [students]);
 
-  /** خيارات السنوات الدراسية مبنية من البيانات الفعلية + القائمة المعتمدة. */
+  /** خيارات الصفوف الدراسية مبنية من البيانات الفعلية + القائمة المعتمدة. */
   const gradeOptions = useMemo(
     () => buildSchoolGradeOptions(students, [gradeFilter]),
     [students, gradeFilter],
@@ -302,9 +286,6 @@ const Students = () => {
           break;
         case "hijri_join_date":
           cmp = (a.hijri_join_date || "").localeCompare(b.hijri_join_date || "", "ar");
-          break;
-        case "years":
-          cmp = (a.years?.length || 0) - (b.years?.length || 0);
           break;
         case "parts":
           cmp =
@@ -442,6 +423,8 @@ const Students = () => {
 
   const handlePrintTable = async () => {
     const { printHtmlDocument } = await import("@/utils/nativePrint");
+    // تواريخ الترويسة المطبوعة بتوقيت اليمن (اليوم + الهجري + الميلادي).
+    const printDateLine = getArabicDateParts().fullLine;
     const rowsHtml = filtered
       .map(
         (s, i) => `
@@ -452,7 +435,6 @@ const Students = () => {
           <td>${s.school_grade || "—"}</td>
           <td>${s.status || "طبيعي"}</td>
           <td>${s.hijri_join_date || "—"}</td>
-          <td>${(s.years || []).map((y) => `${y}هـ`).join("، ") || "—"}</td>
           <td>${s.yearData?.parts || "0"}</td>
           <td>${s.yearData?.total || "0"}</td>
           <td>${s.yearData?.grade || "—"}</td>
@@ -484,6 +466,7 @@ const Students = () => {
           <div class="header">
             <img src="${logo}" alt="الشعار" />
             <h1>مركز إنماء الأهلي الخيري — السجل الرسمي للطلاب والطالبات</h1>
+            <p>${printDateLine} | جميع الأعوام</p>
             <p>إجمالي السجلات: ${filtered.length} | مجموع الأجزاء: ${summaryStats.totalParts} | متوسط الدرجات: ${summaryStats.avgScore}</p>
           </div>
           <table>
@@ -492,11 +475,10 @@ const Students = () => {
                 <th>م</th>
                 <th>الاسم</th>
                 <th>الجنس</th>
-                <th>السنة الدراسية</th>
+                <th>الصف الدراسي</th>
                 <th>الحالة</th>
                 <th>تاريخ الالتحاق</th>
-                <th>سنوات التسجيل</th>
-                <th>الأجزاء</th>
+                <th>الأجزاء (آخر عام)</th>
                 <th>المجموع</th>
                 <th>التقدير</th>
                 <th>الهاتف</th>
@@ -505,7 +487,7 @@ const Students = () => {
             <tbody>${rowsHtml}</tbody>
             <tfoot>
               <tr>
-                <td colspan="7">الإجمالي (${filtered.length} طالب/طالبة)</td>
+                <td colspan="6">الإجمالي (${filtered.length} طالب/طالبة)</td>
                 <td>${summaryStats.totalParts}</td>
                 <td>متوسط: ${summaryStats.avgScore}</td>
                 <td colspan="2">خاتمون: ${summaryStats.khatimCount}</td>
@@ -527,7 +509,6 @@ const Students = () => {
     if (readOnly) return;
     setEditingId(null);
     setForm(emptyForm());
-    void (async () => setRegisterYear(await getActiveYear()))();
     setDialogOpen(true);
   };
 
@@ -553,13 +534,11 @@ const Students = () => {
         await saveStudent({ id: editingId, name, ...profile });
         toast({ title: "تم تعديل بيانات الطالب/الطالبة" });
       } else {
-        const newId = await saveStudent({ name, ...profile });
-        if (newId) {
-          await registerStudentInYear(registerYear, newId);
-        }
+        // إضافة إلى السجل الشامل فقط — بلا تسجيل في أي عام.
+        await saveStudent({ name, ...profile });
         toast({
           title: "تمت الإضافة",
-          description: `تم تسجيل ${name} في سجل عام ${registerYear}هـ`,
+          description: `أُضيف ${name} إلى السجل الشامل لكل الأعوام`,
         });
       }
       setDialogOpen(false);
@@ -604,31 +583,6 @@ const Students = () => {
     }
   };
 
-  const handleConfirmDeleteYear = async () => {
-    if (readOnly || !yearToDelete) return;
-    setDeletingYear(true);
-    try {
-      await deleteYearData(yearToDelete, {
-        includeAllYearTables: true,
-        deleteOrphanStudents,
-      });
-      setDeleteYearDialogOpen(false);
-      await load();
-      toast({
-        title: `تم حذف بيانات عام ${yearToDelete}هـ`,
-        description: deleteOrphanStudents
-          ? `تم حذف جميع بيانات عام ${yearToDelete}هـ مع الطلاب المسجلين في هذا العام فقط.`
-          : `تم حذف بيانات عام ${yearToDelete}هـ مع بقاء أسماء الطلاب في السجل العام.`,
-        variant: "destructive",
-      });
-    } catch (error) {
-      console.error("Delete year failed:", error);
-      toast({ title: "تعذّر حذف بيانات العام", variant: "destructive" });
-    } finally {
-      setDeletingYear(false);
-    }
-  };
-
   const handleConfirmDeleteAll = async () => {
     if (readOnly) return;
     setDeletingAll(true);
@@ -662,16 +616,15 @@ const Students = () => {
         const row: Record<string, string> = {
           الاسم: s.name || "",
           الجنس: s.gender || "",
-          "السنة الدراسية": s.school_grade || "",
+          "الصف الدراسي": s.school_grade || "",
           الحالة: s.status || "",
           "تاريخ الالتحاق": s.hijri_join_date || "",
           "الحفظ قبل الالتحاق": s.initial_hifz || "",
           "عام أول مسابقة": s.first_competition_year || "",
           "هاتف ولي الأمر": s.guardian_phone || "",
           "هاتف الطالب/ة": s.student_phone || "",
-          "سنوات التسجيل": (s.years || []).join("، "),
-          "الأجزاء (آخر سنة)": s.yearData?.parts || "",
-          "المجموع (آخر سنة)": s.yearData?.total || "",
+          "الأجزاء (آخر عام)": s.yearData?.parts || "",
+          "المجموع (آخر عام)": s.yearData?.total || "",
           التقدير: s.yearData?.grade || "",
           ملاحظات: s.notes || "",
         };
@@ -699,20 +652,11 @@ const Students = () => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <img src={logo} alt="الشعار" className="h-16 w-auto" />
-          </div>
-          <div className="text-center">
-            <p className="text-xs opacity-80">مركز إنماء الأهلي الخيري</p>
-            <h1 className="text-2xl font-bold flex items-center justify-center gap-2 mt-1">
-              <GraduationCap className="h-6 w-6" /> السجل الرسمي للطلاب والطالبات
-            </h1>
-            <p className="text-sm opacity-90 mt-1">جميع الأعوام — {filtered.length} مسجّل</p>
-          </div>
-        </div>
-      </header>
+      <CenterHeader
+        title="السجل الرسمي للطلاب والطالبات"
+        icon={GraduationCap}
+        subtitle={`جميع الأعوام — ${filtered.length} مسجّل`}
+      />
 
       <div className="container mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-7 space-y-4">
         {/* بطاقات إحصائية سريعة */}
@@ -813,10 +757,10 @@ const Students = () => {
         <div className="flex flex-wrap items-center gap-2">
           <Select value={gradeFilter} onValueChange={setGradeFilter}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="كل السنوات الدراسية" />
+              <SelectValue placeholder="كل الصفوف الدراسية" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_GRADES_VALUE}>كل السنوات الدراسية</SelectItem>
+              <SelectItem value={ALL_GRADES_VALUE}>كل الصفوف الدراسية</SelectItem>
               {gradeOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -902,14 +846,6 @@ const Students = () => {
                 {extraDuplicatesCount}
               </span>
             )}
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setDeleteYearDialogOpen(true)}
-            disabled={readOnly}
-          >
-            <Trash2 className="h-4 w-4" /> حذف بيانات عام
           </Button>
           <Button
             variant="destructive"
@@ -1018,7 +954,7 @@ const Students = () => {
                       className="min-w-[135px] cursor-pointer select-none border-b border-l border-white/15 px-3 py-3 text-right font-bold transition-colors hover:bg-white/10"
                     >
                       <div className="flex items-center justify-between gap-1">
-                        <span>السنة الدراسية</span>
+                        <span>الصف الدراسي</span>
                         {renderSortIcon("school_grade")}
                       </div>
                     </th>
@@ -1038,15 +974,6 @@ const Students = () => {
                       <div className="flex items-center justify-center gap-1">
                         <span>تاريخ الالتحاق</span>
                         {renderSortIcon("hijri_join_date")}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSort("years")}
-                      className="min-w-[140px] cursor-pointer select-none border-b border-l border-white/15 px-2.5 py-3 text-center font-bold transition-colors hover:bg-white/10"
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        <span>سنوات التسجيل</span>
-                        {renderSortIcon("years")}
                       </div>
                     </th>
                     <th
@@ -1215,22 +1142,6 @@ const Students = () => {
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="border-b border-l border-border/60 px-2.5 py-2.5 text-center">
-                          {s.years.length > 0 ? (
-                            <div className="flex flex-wrap justify-center gap-1">
-                              {s.years.map((y) => (
-                                <span
-                                  key={y}
-                                  className="inline-flex items-center rounded-md border border-primary/25 bg-primary/8 px-1.5 py-0.5 text-[11px] font-bold text-primary"
-                                >
-                                  {y}هـ
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="border-b border-l border-border/60 bg-amber-500/[0.04] px-2.5 py-2.5 text-center">
@@ -1446,7 +1357,7 @@ const Students = () => {
               </div>
 
               <div>
-                <label className="text-sm font-medium">السنة الدراسية وقت الالتحاق</label>
+                <label className="text-sm font-medium">الصف الدراسي وقت الالتحاق</label>
                 <Select
                   value={form.school_grade || NONE_VALUE}
                   onValueChange={(v) =>
@@ -1593,24 +1504,6 @@ const Students = () => {
                   placeholder="ملاحظات عن الطالب/ة (اختياري)"
                 />
               </div>
-
-              {!editingId && (
-                <div>
-                  <label className="text-sm font-medium">سنة التسجيل</label>
-                  <Select value={registerYear} onValueChange={setRegisterYear}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {YEARS.map((y) => (
-                        <SelectItem key={y} value={String(y)}>
-                          {y}هـ
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -1653,67 +1546,7 @@ const Students = () => {
         </DialogContent>
       </Dialog>
 
-      {/* تأكيد حذف بيانات عام */}
-      <Dialog open={deleteYearDialogOpen} onOpenChange={setDeleteYearDialogOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" /> حذف بيانات عام
-            </DialogTitle>
-            <DialogDescription>
-              اختر العام المراد حذف بياناته (الدرجات، الحفظ، المتابعة الشهرية، الحلقات، المعلمين،
-              الجوائز، الشهادات، المصروفات، والمسابقات الخاصة بذلك العام).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold">اختر العام الهجري</label>
-              <Select value={yearToDelete} onValueChange={setYearToDelete}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر العام" />
-                </SelectTrigger>
-                <SelectContent>
-                  {YEARS.map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}هـ
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <label className="flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm hover:bg-secondary/40">
-              <Checkbox
-                checked={deleteOrphanStudents}
-                onCheckedChange={(v) => setDeleteOrphanStudents(v === true)}
-                className="mt-0.5"
-              />
-              <div>
-                <div className="font-semibold">
-                  حذف الطلاب المسجلين في عام {yearToDelete}هـ فقط من السجل العام أيضاً
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  إذا لم تحدد هذا الخيار، تُحذف درجات وبيانات عام {yearToDelete}هـ فقط وتبقى أسماء
-                  الطلاب في السجل العام.
-                </div>
-              </div>
-            </label>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteYearDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void handleConfirmDeleteYear()}
-              disabled={deletingYear || !yearToDelete}
-              className="gap-1"
-            >
-              <Trash2 className="h-4 w-4" />
-              {deletingYear ? "جارٍ الحذف..." : `حذف بيانات عام ${yearToDelete}هـ`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ملاحظة: حذف بيانات عام انتقل إلى صفحة الإعدادات وحدها */}
 
       {/* تأكيد حذف كل البيانات */}
       <Dialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>

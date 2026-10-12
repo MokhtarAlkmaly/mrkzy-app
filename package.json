@@ -16,7 +16,9 @@
     "cap:sync": "cap sync android",
     "cap:android": "cap open android",
     "quran:extract": "node scripts/extract-quran-text.mjs",
-    "test:sql": "node scripts/test-sql.mjs"
+    "test:sql": "node scripts/test-sql.mjs",
+    "test:dates": "node scripts/test-dates.mjs",
+    "test:header": "node scripts/test-header.mjs"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.0",

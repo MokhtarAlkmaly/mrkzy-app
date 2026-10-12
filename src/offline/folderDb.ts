@@ -198,7 +198,7 @@ const README_TEXT = `مجلد قاعدة بيانات «مركز إنماء ال
 
   mrkzy-db.json            ملف التعريف (لا تحذفه)
   backups/                 نسخ احتياطية يومية تلقائية (آخر ${MAX_DAILY_BACKUPS} يوماً)
-  media/                   الصور والفيديوهات
+  media/                   الصور والفيديوهات (لا تظهر في «معرض الصور» — لا تحذفها من هناك)
 
 نصائح:
 - انسخ هذا المجلد كاملاً إلى مكان آخر (حاسب، فلاش، بطاقة أخرى) للاحتفاظ بنسخة.
@@ -289,6 +289,13 @@ export class FolderDb {
     return () => {
       this.changeListeners.delete(fn);
     };
+  }
+
+  /** تنبيه إضافي يظهر في شريط الحالة أعلى الشاشة (مثل مجلد ليس على الهاتف). */
+  addWarning(message: string) {
+    if (!this.status.warnings.includes(message)) {
+      this.setStatus({ warnings: [...this.status.warnings, message] });
+    }
   }
 
   private setStatus(patch: Partial<DbStatus>) {

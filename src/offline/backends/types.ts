@@ -37,6 +37,8 @@ export interface FolderBackend {
   readBlob(path: string): Promise<Blob | null>;
   /** رابط يصلح لوسوم <img>/<video> لعرض ملف من المجلد. */
   getDisplayUrl(path: string): Promise<string | null>;
+  /** روابط عرض لعدة ملفات دفعة واحدة (اختياري — أسرع بكثير على أندرويد). */
+  getDisplayUrls?(paths: string[]): Promise<Array<string | null>>;
   /** حذف ملف (لا خطأ إن لم يكن موجوداً). */
   remove(path: string): Promise<void>;
   /** محتويات مجلد فرعي (أو الجذر عند ""). */

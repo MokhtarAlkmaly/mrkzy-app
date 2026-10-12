@@ -18,6 +18,7 @@
 | `backups/mrkzy-manual-*.json`          | نسخ يدوية من شاشة «قاعدة البيانات»                                                                                                                |
 | `backups/mrkzy-before-*.json`          | نسخ أمان تُحفظ تلقائياً قبل أي استعادة أو نقل من السحابة                                                                                          |
 | `media/<العام>/<ملف>`                  | الصور والفيديوهات (جدول `media` يحفظ المسار النسبي داخل `media/`)                                                                                 |
+| `media/.nomedia`                       | ملف فارغ يُنشأ على أندرويد مع أول صورة/فيديو حتى لا تظهر الوسائط في «معرض الصور» (فهي نسخ مكررة قد تُحذف من هناك خطأً)                            |
 
 الجداول المحلية: `students`, `year_data`, `hifz_history`, `monthly_tracking`, `teachers`,
 `teacher_bonuses`, `teacher_portals`, `monthly_submissions`, `awards`, `certificates`, `donors`,
@@ -38,6 +39,11 @@
   `monthly_tracking` أيضاً (في السحابة كانت تبقى يتيمة بلا FK)؛ حذف بوابة يحذف ترسيلاتها؛ حذف دورة
   أو متدرب/ة يحذف التسجيلات.
 - الدالتان `open_teacher_portal` و`submit_teacher_monthly` منفذتان محلياً بنفس الفحوصات ورسائل الخطأ.
+
+عرض الوسائط على أندرويد: `getFileUri`/`getFileUris` (دفعة واحدة لمعرض الوسائط) تعيد روابط `content://`
+تتحول إلى `https://localhost/_capacitor_content_/…`، ويخدمها `MediaRangeWebViewClient.java` مع دعم طلبات
+النطاق (HTTP Range ← 206) حتى يعمل التقديم في الفيديو ومقاطع الهاتف التي فهرسها في نهاية الملف — خادم
+Capacitor الافتراضي لا يقفز إلى بداية النطاق المطلوب.
 
 ---
 

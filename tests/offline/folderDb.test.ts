@@ -566,3 +566,64 @@ test("جدول غير معروف يرجع خطأ واضحاً بدل الانه�
   const res = await client.from("no_such_table").select("*");
   assert.equal(res.error?.code, "42P01");
 });
+
+test("روابط العرض لعدة ملفات دفعة واحدة إن دعمها المخزن، والرجوع ملفاً ملفاً إن فشلت", async () => {
+  class BatchBackend extends MemoryBackend {
+    batchCalls: string[][] = [];
+    batchError: Error | null = null;
+    async getDisplayUrls(paths: string[]): Promise<Array<string | null>> {
+      this.batchCalls.push(paths);
+      if (this.batchError) throw this.batchError;
+      return paths.map((p) => (this.files.has(p) ? `batch://${p}` : null));
+    }
+  }
+  const backend = new BatchBackend();
+  const db = new FolderDb({ flushDelayMs: 5, dailyBackups: false });
+  await db.open(backend);
+  const client = createLocalClient(() => db);
+  await client.storage.from("media").upload("1447/a.jpg", new Blob(["a"], { type: "image/jpeg" }));
+  await client.storage.from("media").upload("1447/b.mp4", new Blob(["b"], { type: "video/mp4" }));
+
+  const signed = await client.storage
+    .from("media")
+    .createSignedUrls(["1447/a.jpg", "1447/missing.jpg", "1447/b.mp4"], 60);
+  assert.equal(signed.error, null);
+  assert.deepEqual(backend.batchCalls, [
+    ["media/1447/a.jpg", "media/1447/missing.jpg", "media/1447/b.mp4"],
+  ]);
+  assert.deepEqual(
+    signed.data?.map((d) => [d.path, d.signedUrl, d.error === null]),
+    [
+      ["1447/a.jpg", "batch://media/1447/a.jpg", true],
+      ["1447/missing.jpg", "", false],
+      ["1447/b.mp4", "batch://media/1447/b.mp4", true],
+    ],
+  );
+
+  // فشل الدفعة (مثلاً مسار غير مسموح) ← روابط ملفاً ملفاً مع خطأ لكل ملف على حدة
+  backend.batchError = new Error("batch failed");
+  const fallback = await client.storage.from("media").createSignedUrls(["1447/a.jpg", "../x"], 60);
+  assert.equal(fallback.error, null);
+  assert.equal(fallback.data?.[0].signedUrl, "memory://media/1447/a.jpg");
+  assert.equal(fallback.data?.[0].error, null);
+  assert.equal(fallback.data?.[1].signedUrl, "");
+  assert.ok(fallback.data?.[1].error);
+
+  // قائمة فارغة لا تستدعي المخزن
+  const empty = await client.storage.from("media").createSignedUrls([], 60);
+  assert.deepEqual(empty.data, []);
+  assert.equal(backend.batchCalls.length, 2);
+});
+
+test("addWarning يضيف التنبيه مرة واحدة ويُحدّث الواجهة، ويُمسح عند الإغلاق", async () => {
+  const { db } = await setup();
+  let notified = 0;
+  const unsubscribe = db.subscribe(() => notified++);
+  db.addWarning("تنبيه");
+  db.addWarning("تنبيه");
+  assert.deepEqual(db.status.warnings, ["تنبيه"]);
+  assert.equal(notified, 1);
+  unsubscribe();
+  await db.close();
+  assert.deepEqual(db.status.warnings, []);
+});

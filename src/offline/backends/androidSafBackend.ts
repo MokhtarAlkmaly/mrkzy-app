@@ -4,6 +4,7 @@
  */
 
 import { Capacitor } from "@capacitor/core";
+import { MEDIA_DIR } from "../constants";
 import { FolderDb, type NativeFolderInfo } from "../native/folderDbPlugin";
 import {
   base64ToBlob,
@@ -18,6 +19,7 @@ export class AndroidSafBackend implements FolderBackend {
   readonly kind = "android-saf" as const;
   readonly label: string;
   readonly info: NativeFolderInfo;
+  private noMediaChecked = false;
 
   constructor(info: NativeFolderInfo) {
     this.info = info;
@@ -60,8 +62,26 @@ export class AndroidSafBackend implements FolderBackend {
     });
   }
 
+  /**
+   * ملف .nomedia داخل مجلد الوسائط: يمنع ظهور صوره ومقاطعه في «معرض الصور»؛
+   * فهي نسخ من صور المعرض أصلاً، وقد يحذفها المستخدم من هناك ظناً أنها مكررة
+   * فتختفي من التطبيق. لا يؤثر على عرضها داخل التطبيق.
+   */
+  private async ensureNoMedia(target: string): Promise<void> {
+    if (this.noMediaChecked || !target.startsWith(`${MEDIA_DIR}/`)) return;
+    this.noMediaChecked = true;
+    const marker = `${MEDIA_DIR}/.nomedia`;
+    try {
+      const { uri } = await FolderDb.getFileUri({ path: marker });
+      if (!uri) await FolderDb.writeFile({ path: marker, data: "", encoding: "utf8" });
+    } catch {
+      /* اختياري */
+    }
+  }
+
   async writeBlob(path: string, data: Blob): Promise<void> {
     const target = this.norm(path);
+    await this.ensureNoMedia(target);
     const mimeType = data.type || guessMimeType(path);
     // الملفات الكبيرة (فيديو) تُكتب على دفعات حتى لا يُمرَّر الملف كاملاً عبر
     // الجسر كنص base64 ضخم قد يستنفد الذاكرة على الأجهزة المتواضعة.
@@ -99,8 +119,18 @@ export class AndroidSafBackend implements FolderBackend {
   async getDisplayUrl(path: string): Promise<string | null> {
     const { uri } = await FolderDb.getFileUri({ path: this.norm(path) });
     if (!uri) return null;
-    // يحوّل content:// إلى رابط يخدمه خادم Capacitor المحلي داخل WebView.
+    // يحوّل content:// إلى https://localhost/_capacitor_content_/... الذي يخدمه
+    // MediaRangeWebViewClient (مع دعم التقديم في الفيديو).
     return Capacitor.convertFileSrc(uri);
+  }
+
+  async getDisplayUrls(paths: string[]): Promise<Array<string | null>> {
+    if (paths.length === 0) return [];
+    const { uris } = await FolderDb.getFileUris({ paths: paths.map((p) => this.norm(p)) });
+    return paths.map((_, i) => {
+      const uri = uris?.[i];
+      return uri ? Capacitor.convertFileSrc(uri) : null;
+    });
   }
 
   async remove(path: string): Promise<void> {

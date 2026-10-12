@@ -60,6 +60,14 @@ public class FolderDbPlugin extends Plugin {
     /** معرّفات المجلدات الفرعية (المسار النسبي ← معرّف المستند) لتسريع الوصول. */
     private final Map<String, String> dirCache = new HashMap<>();
 
+    @Override
+    public void load() {
+        super.load();
+        // عرض صور وفيديو المجلد مع دعم التقديم/التأخير في الفيديو (طلبات النطاق).
+        // يُستدعى قبل تهيئة WebView فيعتمده Capacitor من البداية.
+        bridge.setWebViewClient(new MediaRangeWebViewClient(bridge));
+    }
+
     // ================= أدوات عامة =================
 
     private SharedPreferences prefs() {
@@ -175,11 +183,14 @@ public class FolderDbPlugin extends Plugin {
             name = rootId.substring(Math.max(slash, colon) + 1);
         }
         boolean primary = rootId.startsWith("primary:") || rootId.startsWith("home:");
+        boolean local = EXTERNAL_STORAGE_AUTHORITY.equals(tree.getAuthority());
         o.put("uri", tree.toString());
         o.put("name", name);
         o.put("path", describePath(tree, rootId, name));
         o.put("hasPermission", accessible);
-        o.put("removable", EXTERNAL_STORAGE_AUTHORITY.equals(tree.getAuthority()) && !primary);
+        o.put("removable", local && !primary);
+        // false: المجلد من مزوّد آخر (خدمة سحابية مثلاً) وليس ذاكرة الهاتف أو بطاقة SD.
+        o.put("local", local);
         return o;
     }
 
@@ -313,6 +324,50 @@ public class FolderDbPlugin extends Plugin {
         return current;
     }
 
+    /** كل عناصر مجلد (الاسم ← المعرّف) باستعلام واحد. */
+    private Map<String, String> listChildIds(Uri tree, String parentId) throws IOException {
+        Map<String, String> out = new HashMap<>();
+        Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, parentId);
+        try (
+            Cursor c = resolver()
+                .query(children, new String[] { Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME }, null, null, null)
+        ) {
+            if (c == null) throw new IOException("تعذّر قراءة محتويات المجلد");
+            while (c.moveToNext()) {
+                String childName = c.getString(1);
+                if (childName != null && !out.containsKey(childName)) out.put(childName, c.getString(0));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * ينشئ ملفاً بالاسم المطلوب حرفياً. قد يضيف النظام امتداداً للاسم إن لم يطابق
+     * نوع الملف (مثلاً «x.mp4» بنوع video/quicktime ← «x.mp4.mov») فلا يعثر التطبيق
+     * على الملف بعدها؛ لذلك ننشئه بنوع عام ثم نتحقق من الاسم ونصححه إن لزم.
+     */
+    private Uri createFileExact(Uri tree, String parentId, String name) throws IOException {
+        Uri created = DocumentsContract.createDocument(resolver(), docUri(tree, parentId), MIME_BINARY, name);
+        if (created == null) throw new IOException("تعذّر إنشاء الملف: " + name);
+        String actual = queryDisplayName(created);
+        if (actual == null || name.equals(actual)) return created;
+        try {
+            Uri renamed = DocumentsContract.renameDocument(resolver(), created, name);
+            if (renamed != null) {
+                created = renamed;
+                if (name.equals(queryDisplayName(renamed))) return renamed;
+            }
+        } catch (Exception e) {
+            Logger.debug(TAG, "rename after create failed: " + e.getMessage());
+        }
+        try {
+            DocumentsContract.deleteDocument(resolver(), created);
+        } catch (Exception ignored) {
+            // أفضل محاولة
+        }
+        throw new IOException("غيّر نظام الملفات اسم الملف من «" + name + "» إلى «" + actual + "»");
+    }
+
     private String resolveFile(Uri tree, String path) throws IOException {
         String[] parts = splitPath(path);
         if (parts.length == 0) throw new IOException("مسار ملف غير صالح");
@@ -378,20 +433,15 @@ public class FolderDbPlugin extends Plugin {
         }
     }
 
-    private void writeFileInternal(Uri tree, String path, byte[] bytes, String mimeType, boolean atomic) throws IOException {
+    private void writeFileInternal(Uri tree, String path, byte[] bytes, boolean atomic) throws IOException {
         String[] parts = splitPath(path);
         if (parts.length == 0) throw new IOException("مسار ملف غير صالح");
         String name = parts[parts.length - 1];
         String parentId = resolveDir(tree, parts, parts.length - 1, true);
-        Uri parentUri = docUri(tree, parentId);
-        String mime = mimeType == null || mimeType.isEmpty() ? MIME_BINARY : mimeType;
 
         if (!atomic) {
             String existing = findChild(tree, parentId, name);
-            Uri target = existing != null
-                ? docUri(tree, existing)
-                : DocumentsContract.createDocument(resolver(), parentUri, mime, name);
-            if (target == null) throw new IOException("تعذّر إنشاء الملف: " + name);
+            Uri target = existing != null ? docUri(tree, existing) : createFileExact(tree, parentId, name);
             writeBytes(target, bytes);
             return;
         }
@@ -400,8 +450,7 @@ public class FolderDbPlugin extends Plugin {
         String tmpName = name + ".tmp";
         String staleTmp = findChild(tree, parentId, tmpName);
         if (staleTmp != null) deleteDoc(tree, staleTmp);
-        Uri tmpUri = DocumentsContract.createDocument(resolver(), parentUri, MIME_BINARY, tmpName);
-        if (tmpUri == null) throw new IOException("تعذّر إنشاء ملف مؤقت: " + tmpName);
+        Uri tmpUri = createFileExact(tree, parentId, tmpName);
         writeBytes(tmpUri, bytes);
 
         // 2) حذف القديم ثم 3) إعادة تسمية المؤقت
@@ -415,24 +464,19 @@ public class FolderDbPlugin extends Plugin {
         }
         if (renamed != null && name.equals(queryDisplayName(renamed))) return;
 
-        // احتياط: بعض المزوّدات لا تدعم إعادة التسمية — نكتب مباشرة ثم نحذف المؤقت.
-        if (renamed != null) {
-            try {
-                DocumentsContract.deleteDocument(resolver(), renamed);
-            } catch (Exception ignored) {
-                // لا شيء
-            }
-        } else {
-            try {
-                DocumentsContract.deleteDocument(resolver(), tmpUri);
-            } catch (Exception ignored) {
-                // لا شيء
-            }
-        }
+        // احتياط: بعض المزوّدات لا تدعم إعادة التسمية — نكتب الملف مباشرة أولاً، ولا
+        // نحذف المؤقت إلا بعد نجاح الكتابة، حتى توجد نسخة كاملة في كل لحظة.
         String again = findChild(tree, parentId, name);
-        Uri target = again != null ? docUri(tree, again) : DocumentsContract.createDocument(resolver(), parentUri, mime, name);
-        if (target == null) throw new IOException("تعذّر إنشاء الملف: " + name);
+        Uri target = again != null ? docUri(tree, again) : createFileExact(tree, parentId, name);
         writeBytes(target, bytes);
+        Uri leftover = renamed != null ? renamed : tmpUri;
+        try {
+            String leftoverId = DocumentsContract.getDocumentId(leftover);
+            String targetId = DocumentsContract.getDocumentId(target);
+            if (!leftoverId.equals(targetId)) DocumentsContract.deleteDocument(resolver(), leftover);
+        } catch (Exception ignored) {
+            // يبقى ملف .tmp كامل — لا ضرر، ويُحذف في الكتابة التالية
+        }
     }
 
     /** ينفّذ العملية، وعند الفشل يمسح ذاكرة المجلدات ويعيد المحاولة مرة واحدة. */
@@ -536,7 +580,6 @@ public class FolderDbPlugin extends Plugin {
         String path = call.getString("path", "");
         String data = call.getString("data", "");
         String encoding = call.getString("encoding", "utf8");
-        String mimeType = call.getString("mimeType", MIME_BINARY);
         boolean atomic = Boolean.TRUE.equals(call.getBoolean("atomic", false));
         final byte[] bytes;
         try {
@@ -546,7 +589,7 @@ public class FolderDbPlugin extends Plugin {
             return;
         }
         withRetry(call, "تعذّرت الكتابة في " + path, () -> {
-            writeFileInternal(requireTree(), path, bytes, mimeType, atomic);
+            writeFileInternal(requireTree(), path, bytes, atomic);
             call.resolve();
         });
     }
@@ -656,6 +699,44 @@ public class FolderDbPlugin extends Plugin {
             String id = resolveFile(tree, path);
             JSObject ret = new JSObject();
             ret.put("uri", id == null ? JSONObject.NULL : docUri(tree, id).toString());
+            call.resolve(ret);
+        });
+    }
+
+    /**
+     * روابط content:// لعدة ملفات دفعة واحدة (معرض الوسائط): يُقرأ كل مجلد مرة واحدة
+     * بدل استعلام لكل صورة — الفرق كبير عند وجود مئات الصور.
+     */
+    @PluginMethod
+    public void getFileUris(PluginCall call) {
+        JSONArray paths = call.getArray("paths", new JSArray());
+        withRetry(call, "تعذّر الوصول إلى ملفات الوسائط", () -> {
+            Uri tree = requireTree();
+            Map<String, Map<String, String>> listings = new HashMap<>();
+            JSArray uris = new JSArray();
+            for (int i = 0; i < paths.length(); i++) {
+                String uri = null;
+                String[] parts;
+                try {
+                    parts = splitPath(paths.optString(i, ""));
+                } catch (IOException e) {
+                    parts = new String[0]; // مسار غير مسموح ← غير موجود
+                }
+                if (parts.length > 0) {
+                    String dirKey = joinPath(parts, parts.length - 1);
+                    Map<String, String> children = listings.get(dirKey);
+                    if (children == null) {
+                        String dirId = resolveDir(tree, parts, parts.length - 1, false);
+                        children = dirId == null ? new HashMap<String, String>() : listChildIds(tree, dirId);
+                        listings.put(dirKey, children);
+                    }
+                    String id = children.get(parts[parts.length - 1]);
+                    if (id != null) uri = docUri(tree, id).toString();
+                }
+                uris.put(uri == null ? JSONObject.NULL : uri);
+            }
+            JSObject ret = new JSObject();
+            ret.put("uris", uris);
             call.resolve(ret);
         });
     }

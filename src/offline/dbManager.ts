@@ -225,11 +225,18 @@ let lastOpenError: string | null = null;
 
 export const getLastOpenError = () => lastOpenError;
 
+export const NOT_LOCAL_FOLDER_WARNING =
+  "المجلد المختار ليس في ذاكرة الهاتف ولا على بطاقة SD (قد يكون في خدمة سحابية تحتاج إنترنت). للعمل بدون إنترنت اختر مجلداً من ذاكرة الهاتف أو بطاقة الذاكرة من شاشة «قاعدة البيانات».";
+
 const openBackend = async (backend: FolderBackend): Promise<OpenResult> => {
   const result = await db.open(backend);
   writeSavedConfig({ kind: backend.kind, label: backend.label, savedAt: new Date().toISOString() });
   installLifecycleHandlers();
   lastOpenError = null;
+  if (backend instanceof AndroidSafBackend && backend.info.local === false) {
+    db.addWarning(NOT_LOCAL_FOLDER_WARNING);
+    return { ...result, warnings: [...result.warnings, NOT_LOCAL_FOLDER_WARNING] };
+  }
   return result;
 };
 

@@ -104,6 +104,8 @@ const toBlob = (file: unknown): Blob => {
   throw new Error("نوع ملف غير مدعوم");
 };
 
+const MISSING_MEDIA = "الملف غير موجود في مجلد قاعدة البيانات";
+
 const storageError = (err: unknown) => ({
   message: err instanceof Error ? err.message : String(err),
   name: "StorageError",
@@ -161,13 +163,29 @@ export const createLocalClient = (getDb: () => FolderDb) => {
       async createSignedUrls(paths: string[], _expiresIn?: number) {
         try {
           const backend = backendOrThrow();
+          if (backend.getDisplayUrls && paths.length > 0) {
+            // دفعة واحدة (أندرويد): كل مجلد يُقرأ مرة واحدة بدل استعلام لكل ملف.
+            try {
+              const urls = await backend.getDisplayUrls(paths.map((p) => full(p)));
+              return {
+                data: paths.map((p, i) => ({
+                  path: p,
+                  signedUrl: urls[i] ?? "",
+                  error: urls[i] ? null : MISSING_MEDIA,
+                })),
+                error: null,
+              };
+            } catch {
+              /* نرجع إلى الطريقة العادية ملفاً ملفاً لنعرف خطأ كل ملف */
+            }
+          }
           const data: Array<{ path: string; signedUrl: string; error: string | null }> = [];
           for (const p of paths) {
             let signedUrl: string | null = null;
             let error: string | null = null;
             try {
               signedUrl = await backend.getDisplayUrl(full(p));
-              if (!signedUrl) error = "الملف غير موجود في مجلد قاعدة البيانات";
+              if (!signedUrl) error = MISSING_MEDIA;
             } catch (e) {
               error = e instanceof Error ? e.message : String(e);
             }

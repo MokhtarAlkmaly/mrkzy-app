@@ -22,6 +22,8 @@ export interface NativeFolderInfo {
   hasPermission: boolean;
   /** هل المجلد على بطاقة ذاكرة خارجية (SD)؟ */
   removable?: boolean;
+  /** false: المجلد ليس في ذاكرة الهاتف ولا بطاقة SD (مزوّد آخر، كخدمة سحابية). */
+  local?: boolean;
 }
 
 export interface NativeDirEntry {
@@ -46,7 +48,10 @@ export interface FolderDbPlugin {
     path: string;
     encoding: "utf8" | "base64";
   }): Promise<{ exists: boolean; data?: string }>;
-  /** atomic=true: يكتب ملفاً مؤقتاً ثم يستبدل به الأصلي. */
+  /**
+   * atomic=true: يكتب ملفاً مؤقتاً ثم يستبدل به الأصلي.
+   * mimeType للتوثيق فقط: يُنشأ الملف دائماً بالاسم المطلوب حرفياً.
+   */
   writeFile(options: {
     path: string;
     data: string;
@@ -60,6 +65,8 @@ export interface FolderDbPlugin {
   listDir(options: { path: string }): Promise<{ entries: NativeDirEntry[] }>;
   /** رابط content:// لملف داخل المجلد (لعرض الصور والفيديو). */
   getFileUri(options: { path: string }): Promise<{ uri: string | null }>;
+  /** روابط content:// لعدة ملفات دفعة واحدة (كل مجلد يُقرأ مرة واحدة). */
+  getFileUris(options: { paths: string[] }): Promise<{ uris: Array<string | null> }>;
   /** حدث انتقال التطبيق للخلفية (لحفظ التعديلات المعلقة فوراً). */
   addListener(eventName: "appPause", listener: () => void): Promise<PluginListenerHandle>;
 }

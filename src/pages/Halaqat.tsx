@@ -89,7 +89,7 @@ const Halaqat = () => {
       console.error("تعذر تحميل إدارة الحلقات:", error);
       toast({
         title: "تعذر تحميل الحلقات",
-        description: "تحقق من الاتصال وحاول مرة أخرى.",
+        description: "تعذّر الوصول إلى مجلد قاعدة البيانات — راجع شاشة «قاعدة البيانات».",
         variant: "destructive",
       });
     } finally {

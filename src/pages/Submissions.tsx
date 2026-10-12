@@ -386,7 +386,7 @@ const Submissions = () => {
       console.error(err);
       toast({
         title: "تعذّر التحميل",
-        description: "تحقق من الاتصال وحاول مجدداً.",
+        description: "تعذّر الوصول إلى مجلد قاعدة البيانات — راجع شاشة «قاعدة البيانات».",
         variant: "destructive",
       });
     } finally {
@@ -459,7 +459,7 @@ const Submissions = () => {
       console.error(err);
       toast({
         title: "تعذّر الاعتماد",
-        description: "تأكد من الاتصال بالإنترنت.",
+        description: "تعذّر الوصول إلى مجلد قاعدة البيانات — راجع شاشة «قاعدة البيانات».",
         variant: "destructive",
       });
     } finally {
@@ -575,7 +575,7 @@ const Submissions = () => {
       console.error("تعذّر حفظ التقرير اليدوي", err);
       toast({
         title: "تعذّر الحفظ",
-        description: "تحقق من الاتصال بالإنترنت وحاول مجدداً.",
+        description: "تعذّر الوصول إلى مجلد قاعدة البيانات — راجع شاشة «قاعدة البيانات».",
         variant: "destructive",
       });
     } finally {

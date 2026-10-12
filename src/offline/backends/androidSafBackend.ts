@@ -33,9 +33,15 @@ export class AndroidSafBackend implements FolderBackend {
   }
 
   async readTopLevelTexts(suffixes: string[]): Promise<Record<string, string>> {
-    const { files } = await FolderDb.readTopLevel({ suffixes });
+    // ملفاً ملفاً بدل دفعة واحدة: قاعدة بيانات كبيرة (سنوات من المتابعة الشهرية)
+    // قد تصل لعدة ميجابايت، وتمريرها كرسالة واحدة عبر الجسر أثقل على الذاكرة.
+    const { entries } = await FolderDb.listDir({ path: "" });
     const out: Record<string, string> = {};
-    for (const f of files || []) out[f.name] = f.data;
+    for (const e of entries || []) {
+      if (e.isDir || !suffixes.some((s) => e.name.endsWith(s))) continue;
+      const res = await FolderDb.readFile({ path: e.name, encoding: "utf8" });
+      if (res.exists) out[e.name] = res.data ?? "";
+    }
     return out;
   }
 

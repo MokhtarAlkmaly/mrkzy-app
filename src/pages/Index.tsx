@@ -786,7 +786,7 @@ const Index = () => {
                   className="h-2"
                 />
                 <p className="text-xs text-center text-muted-foreground">
-                  {syncProgress.label || "جارٍ المزامنة"}: {syncProgress.current} /{" "}
+                  {syncProgress.label || "جارٍ الحفظ"}: {syncProgress.current} /{" "}
                   {syncProgress.total}
                 </p>
               </div>

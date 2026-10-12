@@ -264,7 +264,7 @@ const MonthlyTracking = () => {
     } else {
       toast({
         title: "تعذّر حفظ بعض السجلات",
-        description: "تأكد من اتصالك بالإنترنت وحاول مرة أخرى",
+        description: "تعذّر الوصول إلى مجلد قاعدة البيانات — راجع شاشة «قاعدة البيانات».",
         variant: "destructive",
       });
     }

@@ -122,7 +122,7 @@ const TeacherLinks = () => {
       console.error("تعذّر تحميل روابط المعلمين والمعلمات", err);
       toast({
         title: "تعذّر التحميل",
-        description: "تحقق من الاتصال وحاول مجدداً.",
+        description: "تعذّر الوصول إلى مجلد قاعدة البيانات — راجع شاشة «قاعدة البيانات».",
         variant: "destructive",
       });
     } finally {

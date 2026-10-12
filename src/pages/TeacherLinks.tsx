@@ -15,6 +15,7 @@ import {
   Loader2,
   Inbox,
   CheckCircle2,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,8 +33,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useArabicDates } from "@/hooks/useArabicDates";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { CENTER_NAME } from "@/utils/centerInfo";
 import { getActiveYear, loadTeachers } from "@/utils/storage";
 import { START_YEAR, END_YEAR, TRACKING_MONTHS, formatYearKey } from "@/types/student";
 import {
@@ -53,6 +56,7 @@ const monthLabel = (m: number) => TRACKING_MONTHS.find((x) => x.value === m)?.la
 const TeacherLinks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const dates = useArabicDates();
   const userId = user?.id || "";
 
   const [portals, setPortals] = useState<TeacherPortal[]>([]);
@@ -297,7 +301,8 @@ const TeacherLinks = () => {
         {/* الترويسة */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="flex items-center gap-2 text-xl font-black text-white">
+            <p className="text-base font-black text-emerald-300">{CENTER_NAME}</p>
+            <h1 className="mt-1 flex items-center gap-2 text-xl font-black text-white">
               <Link2 className="h-5 w-5 text-violet-300" />
               روابط المعلمين والمعلمات
             </h1>
@@ -305,6 +310,24 @@ const TeacherLinks = () => {
               كل رابط يقود معلم/ة إلى بطاقات طلابه لعام وشهر محددين — بدون تسجيل دخول. يُنشأ الرابط
               فقط للمعلمين والمعلمات المضافين في صفحة «المعلمين والمعلمات».
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-white/70">
+              {dates.dayName ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/15">
+                  <CalendarDays className="h-3 w-3 text-emerald-300" />
+                  {dates.dayName}
+                </span>
+              ) : null}
+              {dates.hijriDate ? (
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/15">
+                  {dates.hijriDate}
+                </span>
+              ) : null}
+              {dates.gregorianDate ? (
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/15">
+                  {dates.gregorianDate}
+                </span>
+              ) : null}
+            </div>
           </div>
           <Button
             onClick={() => setAllLinksOpen(true)}

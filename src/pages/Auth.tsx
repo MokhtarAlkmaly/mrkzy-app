@@ -356,7 +356,7 @@ const Auth = () => {
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-amber-200 ring-1 ring-white/15">
               <Sparkles className="h-3.5 w-3.5" />
-              نظام إدارة مركز إنماء الأهلي الخيري
+              مركز إنماء الأهلي الخيري
             </div>
             <h2 className="mt-5 text-3xl font-black leading-relaxed text-white">
               دخول آمن، صلاحيات واضحة، وبيانات محفوظة لكل مستخدم.

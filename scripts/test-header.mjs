@@ -13,6 +13,8 @@
  * التشغيل: npm run test:header
  */
 
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { createServer } from "vite";
 import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
@@ -23,8 +25,23 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 
+const root = process.cwd();
+
+function collectSourceFiles(dir) {
+  const out = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      out.push(...collectSourceFiles(full));
+    } else if (/\.(ts|tsx)$/.test(entry)) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
 const server = await createServer({
-  root: process.cwd(),
+  root,
   server: { middlewareMode: true },
   appType: "custom",
   logLevel: "error",
@@ -93,6 +110,112 @@ try {
     React.createElement(CenterHeader, { title: "الدورات", variant: "training" }),
   );
   check("نمط قسم التدريب يظهر بلونه الخاص", training.includes("from-amber-600"));
+
+  // فحوص اتساق في المصادر عبر صفحات النظام
+  const unifiedHeaderPages = [
+    "Awards.tsx",
+    "Certificates.tsx",
+    "Courses.tsx",
+    "Donors.tsx",
+    "ExamQuestions.tsx",
+    "Expenses.tsx",
+    "Halaqat.tsx",
+    "Home.tsx",
+    "Management.tsx",
+    "Media.tsx",
+    "Settings.tsx",
+    "StudentCompetition.tsx",
+    "Students.tsx",
+    "Teachers.tsx",
+    "Trainees.tsx",
+    "TrainingHome.tsx",
+    "Users.tsx",
+  ];
+  check(
+    "جميع الصفحات الـ17 الموحّدة تستعمل <CenterHeader",
+    unifiedHeaderPages.every((file) =>
+      readFileSync(join(root, "src/pages", file), "utf8").includes("<CenterHeader"),
+    ),
+  );
+
+  const deptSelectSrc = readFileSync(join(root, "src/pages/DepartmentSelect.tsx"), "utf8");
+  check(
+    "صفحة اختيار القسم تعرض اسم المركز والتاريخين وأسماء الأقسام الموحّدة",
+    deptSelectSrc.includes("CENTER_NAME") &&
+      deptSelectSrc.includes("QURAN_DEPARTMENT_NAME") &&
+      deptSelectSrc.includes("TRAINING_DEPARTMENT_NAME") &&
+      deptSelectSrc.includes("useArabicDates") &&
+      deptSelectSrc.includes("hijriDate") &&
+      deptSelectSrc.includes("gregorianDate"),
+  );
+
+  const submissionsSrc = readFileSync(join(root, "src/pages/Submissions.tsx"), "utf8");
+  const teacherLinksSrc = readFileSync(join(root, "src/pages/TeacherLinks.tsx"), "utf8");
+  check(
+    "صفحتا «وارد المعلمين» و«روابط المعلمين» تعرضان اسم المركز والتاريخين",
+    submissionsSrc.includes("CENTER_NAME") &&
+      submissionsSrc.includes("useArabicDates") &&
+      teacherLinksSrc.includes("CENTER_NAME") &&
+      teacherLinksSrc.includes("useArabicDates"),
+  );
+
+  const indexSrc = readFileSync(join(root, "src/pages/Index.tsx"), "utf8");
+  check(
+    "صفحة كشف المسابقة تعرض اسم المركز وقسم القرآن الكريم وتاريخ اليوم بتوقيت اليمن",
+    indexSrc.includes("مركز إنماء الأهلي الخيري") &&
+      indexSrc.includes("QURAN_DEPARTMENT_NAME") &&
+      indexSrc.includes("useArabicDates"),
+  );
+
+  const allSrcFiles = collectSourceFiles(join(root, "src"));
+  check(
+    "خلو جميع ملفات src/ من عبارة «نظام إدارة»",
+    allSrcFiles.every((f) => !readFileSync(f, "utf8").includes("نظام إدارة")),
+  );
+
+  const allowedHeaderFiles = new Set([
+    join(root, "src/components/CenterHeader.tsx"),
+    join(root, "src/pages/Index.tsx"),
+    join(root, "src/pages/TeacherPortal.tsx"),
+  ]);
+  check(
+    "لا توجد ترويسات <header قديمة خارج المكوّن الموحّد والصفحات المخصّصة",
+    allSrcFiles.every(
+      (f) => allowedHeaderFiles.has(f) || !readFileSync(f, "utf8").includes("<header"),
+    ),
+  );
+
+  const homeSrc = readFileSync(join(root, "src/pages/Home.tsx"), "utf8");
+  check(
+    "ترويسة الرئيسية خالية من عرض العام النشط",
+    !homeSrc.includes("activeYear") && !homeSrc.includes("العام النشط:"),
+  );
+
+  const studentsSrc = readFileSync(join(root, "src/pages/Students.tsx"), "utf8");
+  check("خلو صفحة الطلاب من عمود «سنوات التسجيل»", !studentsSrc.includes("سنوات التسجيل"));
+
+  check(
+    "تسمية «الصف الدراسي» مستخدمة وخلو src/ من «السنة الدراسية»",
+    studentsSrc.includes("الصف الدراسي") &&
+      allSrcFiles.every((f) => !readFileSync(f, "utf8").includes("السنة الدراسية")),
+  );
+
+  check(
+    "صفحة الطلاب لا تسجّل الطالب تلقائياً في عام ولا تعرض منتقي سنة التسجيل ولا زر حذف بيانات عام",
+    !studentsSrc.includes("سنة التسجيل") &&
+      !studentsSrc.includes("saveStudentsForYear") &&
+      !studentsSrc.includes("deleteYearData") &&
+      !studentsSrc.includes("enrollYear"),
+  );
+
+  const studentsRouteSrc = readFileSync(
+    join(root, "src/routes/_authenticated/students.tsx"),
+    "utf8",
+  );
+  check(
+    "وصف مسار الطلاب يوضّح أنه السجل الرسمي الشامل لكل الأعوام (غير مرتبط بعام محدد)",
+    studentsRouteSrc.includes("السجل الرسمي الشامل لكل الأعوام (غير مرتبط بعام محدد)"),
+  );
 } finally {
   await server.close();
 }

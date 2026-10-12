@@ -416,7 +416,7 @@ const TeacherPortal = () => {
         ))}
 
         <p className="pt-2 text-center text-[10px] text-white/30">
-          نظام إدارة مركز إنماء الأهلي الخيري · قسم القرآن الكريم
+          مركز إنماء الأهلي الخيري · قسم القرآن الكريم
         </p>
       </main>
     </div>

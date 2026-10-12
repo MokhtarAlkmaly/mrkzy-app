@@ -64,7 +64,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "مركز إنماء الأهلي الخيري" },
       {
         name: "description",
-        content: "نظام إدارة مركز إنماء الأهلي الخيري لتحفيظ القرآن الكريم",
+        content: "مركز إنماء الأهلي الخيري — قسم القرآن الكريم وقسم التدريب والتأهيل",
       },
       { name: "author", content: "مختار الكمالي" },
       { name: "keywords", content: "مسابقة رمضانية, حفظ القرآن, مركز إنماء, تحفيظ القرآن" },
@@ -78,11 +78,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:title", content: "مركز إنماء الأهلي الخيري" },
       {
         property: "og:description",
-        content: "نظام إدارة مركز إنماء الأهلي الخيري لتحفيظ القرآن الكريم",
+        content: "مركز إنماء الأهلي الخيري — قسم القرآن الكريم وقسم التدريب والتأهيل",
       },
       {
         name: "twitter:description",
-        content: "نظام إدارة مركز إنماء الأهلي الخيري لتحفيظ القرآن الكريم",
+        content: "مركز إنماء الأهلي الخيري — قسم القرآن الكريم وقسم التدريب والتأهيل",
       },
       {
         property: "og:image",

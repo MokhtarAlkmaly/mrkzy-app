@@ -64,4 +64,7 @@ export interface FolderDbPlugin {
   addListener(eventName: "appPause", listener: () => void): Promise<PluginListenerHandle>;
 }
 
-export const FolderDb = registerPlugin<FolderDbPlugin>("FolderDb");
+// تسجيل واحد فقط حتى مع إعادة تحميل الوحدة أثناء التطوير (HMR).
+const globalCache = globalThis as unknown as { __mrkzyFolderDbPlugin?: FolderDbPlugin };
+export const FolderDb: FolderDbPlugin = (globalCache.__mrkzyFolderDbPlugin ??=
+  registerPlugin<FolderDbPlugin>("FolderDb"));

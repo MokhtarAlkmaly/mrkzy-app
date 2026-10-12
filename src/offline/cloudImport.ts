@@ -144,8 +144,14 @@ export const importFromCloud = async (options: CloudImportOptions): Promise<Clou
       db.all("app_settings").map((r) => [String(r.key), r.value]),
     );
     if (settings) {
-      for (const key of ["active_year", "table_filters", "student_custom_columns", "student_statuses"]) {
-        if (settings[key] !== undefined && settings[key] !== null) appSettings.set(key, settings[key]);
+      for (const key of [
+        "active_year",
+        "table_filters",
+        "student_custom_columns",
+        "student_statuses",
+      ]) {
+        if (settings[key] !== undefined && settings[key] !== null)
+          appSettings.set(key, settings[key]);
       }
     }
     tables.app_settings = Array.from(appSettings.entries()).map(([key, value]) => ({ key, value }));
@@ -162,7 +168,9 @@ export const importFromCloud = async (options: CloudImportOptions): Promise<Clou
         const cloudPath = String(row.file_path || "");
         progress(step, totalSteps, `تنزيل الوسائط ${i + 1}/${mediaRows.length}`);
         if (!cloudPath) continue;
-        const localPath = cloudPath.startsWith(`${uid}/`) ? cloudPath.slice(uid.length + 1) : cloudPath;
+        const localPath = cloudPath.startsWith(`${uid}/`)
+          ? cloudPath.slice(uid.length + 1)
+          : cloudPath;
         try {
           const { data, error } = await client.storage.from("media").download(cloudPath);
           if (error || !data) throw error ?? new Error("فشل التنزيل");

@@ -58,7 +58,11 @@ test("المرشحات والترتيب والتقسيم والعدّ", async ()
     { student_id: 3, year: "1447", total: "70", teacher: null },
     { student_id: 4, year: "1445", total: "60", teacher: "أ" },
   ]);
-  const r1 = await client.from("year_data").select("student_id").eq("year", "1447").order("student_id");
+  const r1 = await client
+    .from("year_data")
+    .select("student_id")
+    .eq("year", "1447")
+    .order("student_id");
   assert.deepEqual(r1.data, [{ student_id: 2 }, { student_id: 3 }]);
 
   const r2 = await client
@@ -68,11 +72,18 @@ test("المرشحات والترتيب والتقسيم والعدّ", async ()
     .limit(1);
   assert.deepEqual(r2.data, [{ year: "1447" }]);
 
-  const r3 = await client.from("year_data").select("id", { count: "exact", head: true }).eq("teacher", "أ");
+  const r3 = await client
+    .from("year_data")
+    .select("id", { count: "exact", head: true })
+    .eq("teacher", "أ");
   assert.equal(r3.count, 2);
   assert.equal(r3.data, null);
 
-  const r4 = await client.from("year_data").select("student_id").in("year", ["1445", "1446"]).order("student_id");
+  const r4 = await client
+    .from("year_data")
+    .select("student_id")
+    .in("year", ["1445", "1446"])
+    .order("student_id");
   assert.deepEqual(r4.data, [{ student_id: 1 }, { student_id: 4 }]);
 
   const r5 = await client.from("year_data").select("student_id").is("teacher", null);
@@ -81,7 +92,11 @@ test("المرشحات والترتيب والتقسيم والعدّ", async ()
   const r6 = await client.from("year_data").select("student_id").neq("teacher", "أ");
   assert.deepEqual(r6.data, [{ student_id: 2 }]);
 
-  const r7 = await client.from("year_data").select("student_id").gte("year", "1446").lt("year", "1447");
+  const r7 = await client
+    .from("year_data")
+    .select("student_id")
+    .gte("year", "1446")
+    .lt("year", "1447");
   assert.deepEqual(r7.data, [{ student_id: 1 }]);
 
   const r8 = await client.from("year_data").select("student_id").order("student_id").range(1, 2);
@@ -94,7 +109,9 @@ test("المرشحات والترتيب والتقسيم والعدّ", async ()
 
 test("ilike غير حساس لحالة الأحرف ويدعم % و _", async () => {
   const { client } = await setup();
-  await client.from("students").insert([{ name: "Ahmad Ali" }, { name: "محمد  أحمد" }, { name: "سعيد" }]);
+  await client
+    .from("students")
+    .insert([{ name: "Ahmad Ali" }, { name: "محمد  أحمد" }, { name: "سعيد" }]);
   const a = await client.from("students").select("name").ilike("name", "ahmad ali");
   assert.deepEqual(a.data, [{ name: "Ahmad Ali" }]);
   const b = await client.from("students").select("name").ilike("name", "%أحمد%");
@@ -105,7 +122,10 @@ test("ilike غير حساس لحالة الأحرف ويدعم % و _", async ()
 
 test("single و maybeSingle", async () => {
   const { client } = await setup();
-  await client.from("teachers").insert([{ year: "1447", name: "أ" }, { year: "1447", name: "ب" }]);
+  await client.from("teachers").insert([
+    { year: "1447", name: "أ" },
+    { year: "1447", name: "ب" },
+  ]);
   const none = await client.from("teachers").select("*").eq("name", "ج").maybeSingle();
   assert.equal(none.error, null);
   assert.equal(none.data, null);
@@ -146,15 +166,23 @@ test("القيود الفريدة ترجع خطأ 23505 يحتوي duplicate", a
 test("upsert بالمفتاح المركّب يحدّث الصف القائم بدل تكراره", async () => {
   const { client, db } = await setup();
   const base = { user_id: LOCAL_USER_ID, student_id: 7, year: "1447", month: 3 };
-  await client.from("monthly_tracking").upsert({ ...base, attendance_score: 5 }, { onConflict: "student_id,year,month" });
-  await client.from("monthly_tracking").upsert({ ...base, attendance_score: 9 }, { onConflict: "student_id,year,month" });
+  await client
+    .from("monthly_tracking")
+    .upsert({ ...base, attendance_score: 5 }, { onConflict: "student_id,year,month" });
+  await client
+    .from("monthly_tracking")
+    .upsert({ ...base, attendance_score: 9 }, { onConflict: "student_id,year,month" });
   const rows = db.all("monthly_tracking");
   assert.equal(rows.length, 1);
   assert.equal(rows[0].attendance_score, 9);
   assert.equal(rows[0].behavior_score, 0);
 
-  await client.from("user_settings").upsert({ user_id: LOCAL_USER_ID, active_year: "1446" }, { onConflict: "user_id" });
-  await client.from("user_settings").upsert({ user_id: LOCAL_USER_ID, center_name: "مركز" }, { onConflict: "user_id" });
+  await client
+    .from("user_settings")
+    .upsert({ user_id: LOCAL_USER_ID, active_year: "1446" }, { onConflict: "user_id" });
+  await client
+    .from("user_settings")
+    .upsert({ user_id: LOCAL_USER_ID, center_name: "مركز" }, { onConflict: "user_id" });
   const settings = db.all("user_settings");
   assert.equal(settings.length, 1);
   assert.equal(settings[0].active_year, "1446");
@@ -163,13 +191,24 @@ test("upsert بالمفتاح المركّب يحدّث الصف القائم ب
 
 test("update مع select يعيد الصفوف، والتحديث المخالف للقيد يُلغى بالكامل", async () => {
   const { client, db } = await setup();
-  await client.from("teachers").insert([{ year: "1447", name: "أ" }, { year: "1447", name: "ب" }]);
-  const upd = await client.from("teachers").update({ name: "ج" }).eq("name", "أ").select().maybeSingle();
+  await client.from("teachers").insert([
+    { year: "1447", name: "أ" },
+    { year: "1447", name: "ب" },
+  ]);
+  const upd = await client
+    .from("teachers")
+    .update({ name: "ج" })
+    .eq("name", "أ")
+    .select()
+    .maybeSingle();
   assert.equal((upd.data as Record<string, unknown>).name, "ج");
   const bad = await client.from("teachers").update({ name: "ب" }).eq("name", "ج");
   assert.equal(bad.error?.code, "23505");
   assert.deepEqual(
-    db.all("teachers").map((t) => t.name).sort(),
+    db
+      .all("teachers")
+      .map((t) => t.name)
+      .sort(),
     ["ب", "ج"],
   );
 });
@@ -177,7 +216,10 @@ test("update مع select يعيد الصفوف، والتحديث المخالف
 test("الحذف المتسلسل (CASCADE) كما في PostgreSQL", async () => {
   const { client, db } = await setup();
   await client.from("students").insert([{ name: "أ" }, { name: "ب" }]);
-  await client.from("year_data").insert([{ student_id: 1, year: "1447" }, { student_id: 2, year: "1447" }]);
+  await client.from("year_data").insert([
+    { student_id: 1, year: "1447" },
+    { student_id: 2, year: "1447" },
+  ]);
   await client.from("hifz_history").insert({ student_id: 1, year_key: "h1446", value: "3" });
   await client.from("monthly_tracking").insert({ student_id: 1, year: "1447", month: 1 });
   const { data: portal } = await client
@@ -194,7 +236,10 @@ test("الحذف المتسلسل (CASCADE) كما في PostgreSQL", async () =>
   });
 
   await client.from("students").delete().eq("id", 1);
-  assert.deepEqual(db.all("year_data").map((r) => r.student_id), [2]);
+  assert.deepEqual(
+    db.all("year_data").map((r) => r.student_id),
+    [2],
+  );
   assert.equal(db.all("hifz_history").length, 0);
   assert.equal(db.all("monthly_tracking").length, 0);
 
@@ -202,13 +247,19 @@ test("الحذف المتسلسل (CASCADE) كما في PostgreSQL", async () =>
   assert.equal(db.all("monthly_submissions").length, 0);
 
   // الدورات → التسجيلات
-  const { data: course } = await client.from("training_courses").insert({ name: "خياطة" }).select().single();
+  const { data: course } = await client
+    .from("training_courses")
+    .insert({ name: "خياطة" })
+    .select()
+    .single();
   const { data: trainee } = await client.from("trainees").insert({ name: "هند" }).select().single();
   const c = course as Record<string, unknown>;
   const t = trainee as Record<string, unknown>;
   await client.from("training_enrollments").insert({ trainee_id: t.id, course_id: c.id });
   assert.equal(c.status, "active");
-  const dupEnroll = await client.from("training_enrollments").insert({ trainee_id: t.id, course_id: c.id });
+  const dupEnroll = await client
+    .from("training_enrollments")
+    .insert({ trainee_id: t.id, course_id: c.id });
   assert.match(dupEnroll.error?.message ?? "", /duplicate/);
   await client.from("training_courses").delete().eq("id", c.id);
   assert.equal(db.all("training_enrollments").length, 0);
@@ -217,7 +268,10 @@ test("الحذف المتسلسل (CASCADE) كما في PostgreSQL", async () =>
 test("تضمين العلاقات: students(name) و alias:teacher_portals(...) و training_courses(name)", async () => {
   const { client } = await setup();
   await client.from("students").insert([{ name: "زينب" }]);
-  await client.from("year_data").insert([{ student_id: 1, year: "1447", total_hifz: "30" }, { student_id: 99, year: "1447" }]);
+  await client.from("year_data").insert([
+    { student_id: 1, year: "1447", total_hifz: "30" },
+    { student_id: 99, year: "1447" },
+  ]);
   const k = await client
     .from("year_data")
     .select("student_id, year, total_hifz, students(name)")
@@ -233,8 +287,21 @@ test("تضمين العلاقات: students(name) و alias:teacher_portals(...) 
     .select("id")
     .single();
   await client.from("monthly_submissions").insert([
-    { portal_id: (portal as Record<string, unknown>).id, student_id: 1, student_name: "زينب", year: "1447", month: 2 },
-    { student_id: 1, student_name: "زينب", year: "1447", month: 3, source: "manual", teacher_name: "يدوي" },
+    {
+      portal_id: (portal as Record<string, unknown>).id,
+      student_id: 1,
+      student_name: "زينب",
+      year: "1447",
+      month: 2,
+    },
+    {
+      student_id: 1,
+      student_name: "زينب",
+      year: "1447",
+      month: 3,
+      source: "manual",
+      teacher_name: "يدوي",
+    },
   ]);
   const subs = await client
     .from("monthly_submissions")
@@ -245,13 +312,26 @@ test("تضمين العلاقات: students(name) و alias:teacher_portals(...) 
   assert.equal(rows[1].portal, null);
   assert.equal(rows[0].status, "pending");
 
-  const { data: course } = await client.from("training_courses").insert({ name: "نقش" }).select().single();
-  const { data: trainee } = await client.from("trainees").insert({ name: "سارة" }).select().single();
-  await client
+  const { data: course } = await client
+    .from("training_courses")
+    .insert({ name: "نقش" })
+    .select()
+    .single();
+  const { data: trainee } = await client
+    .from("trainees")
+    .insert({ name: "سارة" })
+    .select()
+    .single();
+  await client.from("training_enrollments").insert({
+    trainee_id: (trainee as Record<string, unknown>).id,
+    course_id: (course as Record<string, unknown>).id,
+  });
+  const enr = await client
     .from("training_enrollments")
-    .insert({ trainee_id: (trainee as Record<string, unknown>).id, course_id: (course as Record<string, unknown>).id });
-  const enr = await client.from("training_enrollments").select("id, trainee_id, status, training_courses(name)");
-  assert.deepEqual((enr.data as Array<Record<string, unknown>>)[0].training_courses, { name: "نقش" });
+    .select("id, trainee_id, status, training_courses(name)");
+  assert.deepEqual((enr.data as Array<Record<string, unknown>>)[0].training_courses, {
+    name: "نقش",
+  });
 });
 
 test("الحفظ إلى المجلد ثم إعادة الفتح يحافظ على البيانات والعدّاد التسلسلي", async () => {
@@ -293,7 +373,9 @@ test("ملف جدول تالف: يُحفظ نسخة منه ويبدأ الجدو
   const backend = new MemoryBackend();
   const db1 = new FolderDb({ flushDelayMs: 5, dailyBackups: false });
   await db1.open(backend);
-  await createLocalClient(() => db1).from("awards").insert({ year: "1447", recipient_type: "student", recipient_name: "س", award_type: "annual" });
+  await createLocalClient(() => db1)
+    .from("awards")
+    .insert({ year: "1447", recipient_type: "student", recipient_name: "س", award_type: "annual" });
   await db1.flush();
   backend.files.set("awards.json", "{ هذا ليس JSON");
 
@@ -310,7 +392,9 @@ test("استرجاع الملف المؤقت إن انقطعت الكتابة ق
   const backend = new MemoryBackend();
   const db1 = new FolderDb({ flushDelayMs: 5, dailyBackups: false });
   await db1.open(backend);
-  await createLocalClient(() => db1).from("trainees").insert({ name: "منى" });
+  await createLocalClient(() => db1)
+    .from("trainees")
+    .insert({ name: "منى" });
   await db1.flush();
   const text = backend.files.get("trainees.json") as string;
   backend.files.delete("trainees.json");
@@ -342,9 +426,13 @@ test("النسخة الاحتياطية اليومية تُنشأ مرة في ا
   }
   const db = new FolderDb({ flushDelayMs: 5, dailyBackups: true });
   await db.open(backend);
-  await createLocalClient(() => db).from("students").insert({ name: "أ" });
+  await createLocalClient(() => db)
+    .from("students")
+    .insert({ name: "أ" });
   await db.flush();
-  const daily = Array.from(backend.files.keys()).filter((k) => k.startsWith("backups/mrkzy-backup-")).sort();
+  const daily = Array.from(backend.files.keys())
+    .filter((k) => k.startsWith("backups/mrkzy-backup-"))
+    .sort();
   assert.equal(daily.length, 14);
   assert.ok(!daily.includes("backups/mrkzy-backup-2020-01-01.json"));
   const today = daily[daily.length - 1];
@@ -352,7 +440,9 @@ test("النسخة الاحتياطية اليومية تُنشأ مرة في ا
   assert.equal(snapshot.tables.students.length, 1);
 
   const writesBefore = backend.writes;
-  await createLocalClient(() => db).from("students").insert({ name: "ب" });
+  await createLocalClient(() => db)
+    .from("students")
+    .insert({ name: "ب" });
   await db.flush();
   // لا نسخة يومية ثانية في نفس اليوم: جدول + ملف تعريف فقط
   assert.equal(backend.writes - writesBefore, 2);
@@ -383,7 +473,9 @@ test("تصدير/استيراد نسخة احتياطية واستبدال كل 
 
 test("دوال بوابة المعلم/ة (RPC) تعمل محلياً بنفس فحوصات الخادم", async () => {
   const { client, db } = await setup();
-  await client.from("students").insert([{ name: "ب-طالبة" }, { name: "أ-طالبة" }, { name: "خارج العام" }]);
+  await client
+    .from("students")
+    .insert([{ name: "ب-طالبة" }, { name: "أ-طالبة" }, { name: "خارج العام" }]);
   await client.from("year_data").insert([
     { student_id: 1, year: "1447" },
     { student_id: 2, year: "1447" },
@@ -396,7 +488,9 @@ test("دوال بوابة المعلم/ة (RPC) تعمل محلياً بنفس �
     memorization_to_surah: 78,
     memorization_to_ayah: 40,
   });
-  await client.from("teacher_portals").insert({ teacher_name: "أم سعيد", code: "code1234", year: "1447", month: 2 });
+  await client
+    .from("teacher_portals")
+    .insert({ teacher_name: "أم سعيد", code: "code1234", year: "1447", month: 2 });
 
   const open = await client.rpc("open_teacher_portal", { p_code: "code1234" });
   assert.equal(open.error, null);
@@ -426,7 +520,10 @@ test("دوال بوابة المعلم/ة (RPC) تعمل محلياً بنفس �
   };
   const sent = await client.rpc("submit_teacher_monthly", args);
   assert.equal(sent.error, null);
-  const again = await client.rpc("submit_teacher_monthly", { ...args, p_memorization_hifz_score: 20 });
+  const again = await client.rpc("submit_teacher_monthly", {
+    ...args,
+    p_memorization_hifz_score: 20,
+  });
   assert.equal(again.error, null);
   const subs = db.all("monthly_submissions");
   assert.equal(subs.length, 1);
@@ -450,10 +547,14 @@ test("دوال بوابة المعلم/ة (RPC) تعمل محلياً بنفس �
 
 test("التخزين: رفع الملفات وروابط العرض والحذف داخل مجلد media", async () => {
   const { client, backend } = await setup();
-  const up = await client.storage.from("media").upload("1447/a.jpg", new Blob(["img"], { type: "image/jpeg" }));
+  const up = await client.storage
+    .from("media")
+    .upload("1447/a.jpg", new Blob(["img"], { type: "image/jpeg" }));
   assert.equal(up.error, null);
   assert.ok(backend.files.has("media/1447/a.jpg"));
-  const signed = await client.storage.from("media").createSignedUrls(["1447/a.jpg", "1447/missing.jpg"], 60);
+  const signed = await client.storage
+    .from("media")
+    .createSignedUrls(["1447/a.jpg", "1447/missing.jpg"], 60);
   assert.equal(signed.data?.[0].signedUrl, "memory://media/1447/a.jpg");
   assert.ok(signed.data?.[1].error);
   await client.storage.from("media").remove(["1447/a.jpg"]);

@@ -1,26 +1,60 @@
-# قاعدة بيانات مركز إنماء الأهلي الخيري
+# قاعدة بيانات مركز إنماء الأهلي الخيري — النسخة التي تعمل بدون إنترنت
 
-توثيق مخطط **Supabase (PostgreSQL)** المستخدم في التطبيق، مقابل أنواع TypeScript المولَّدة، وسكيمة SQLite المحلية.
+> **في هذه النسخة لا يوجد Supabase ولا خادم.** نفس الجداول الـ 22 وأعمدتها الموصوفة أدناه
+> (عدا جداول المستخدمين والأذونات) تُحفظ كملفات JSON داخل **مجلد قاعدة البيانات** الذي يختاره
+> المستخدم في ذاكرة الهاتف أو على بطاقة SD. المخطط السحابي أدناه بقي مرجعاً: الأعمدة والقيم
+> الافتراضية والقيود الفريدة والحذف المتسلسل مطبَّقة محلياً بنفس السلوك (`src/offline/schema.ts`)،
+> وهو أيضاً ما تقرؤه ميزة «النقل من النسخة السحابية» لمرة واحدة.
 
-آخر مراجعة: **2026-10-11** — 22 جدولاً في `public`، لا يوجد جدول أو عمود مفقود بين `supabase/migrations/` و`src/integrations/supabase/types.ts`.
+## صيغة مجلد قاعدة البيانات (المحلية)
 
-المخطط مُختبَر آلياً: `npm run test:sql` يشغّل كل الـ migrations على PostgreSQL حقيقي داخل الذاكرة (`@electric-sql/pglite`) ويفحص 117 حالة (RLS، الأدوار، دوال بوابة المعلم/ة، مشاركة القراءة، الأشهر الاثني عشر، أعمدة السجل الجديدة).
+| الملف                                  | المحتوى                                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mrkzy-db.json`                        | ملف التعريف: `app` = `mrkzy-net`، `format` (إصدار الصيغة = 1)، `sequences` (آخر معرّف رقمي لكل جدول مثل `students`)، `counts`، `last_backup_date` |
+| `<الجدول>.json`                        | ملف لكل جدول: `{"app","format","table","saved_at","count","rows":[ … ]}` — صف في كل سطر لسهولة القراءة                                            |
+| `<الجدول>.json.tmp`                    | ملف مؤقت أثناء الكتابة الآمنة (يُستعاد منه تلقائياً إن انقطعت الكتابة قبل إعادة التسمية)                                                          |
+| `<الجدول>.corrupt-<وقت>.json`          | نسخة محفوظة من ملف تالف تعذّرت قراءته                                                                                                             |
+| `backups/mrkzy-backup-YYYY-MM-DD.json` | نسخة يومية تلقائية لكل الجداول (يُحتفظ بآخر 14)                                                                                                   |
+| `backups/mrkzy-manual-*.json`          | نسخ يدوية من شاشة «قاعدة البيانات»                                                                                                                |
+| `backups/mrkzy-before-*.json`          | نسخ أمان تُحفظ تلقائياً قبل أي استعادة أو نقل من السحابة                                                                                          |
+| `media/<العام>/<ملف>`                  | الصور والفيديوهات (جدول `media` يحفظ المسار النسبي داخل `media/`)                                                                                 |
+
+الجداول المحلية: `students`, `year_data`, `hifz_history`, `monthly_tracking`, `teachers`,
+`teacher_bonuses`, `teacher_portals`, `monthly_submissions`, `awards`, `certificates`, `donors`,
+`ceremony_expenses`, `student_competitions`, `exam_questions`, `media`, `trainees`,
+`training_courses`, `training_enrollments`, `user_settings`, `profiles` — إضافة إلى جدول محلي
+`app_settings` (مفتاح/قيمة: العام النشط، مرشّحات الجدول، الحالات، الأعمدة المخصّصة).
+لا توجد محلياً: `user_roles`, `data_access_grants` (مستخدم واحد على الجهاز).
+
+كل الصفوف تحمل `user_id = 00000000-0000-4000-8000-000000000001` (المستخدم المحلي الثابت).
+
+السلوك المطابق لـ PostgreSQL (مُختبَر في `npm run test:db`):
+
+- معرّف `students.id` تسلسلي لا يُعاد استخدامه بعد الحذف (مثل BIGSERIAL)، وبقية الجداول `uuid`.
+- القيم الافتراضية و`created_at`/`updated_at` تُملأ تلقائياً.
+- القيود الفريدة ترجع خطأ `23505` (`duplicate key value violates unique constraint …`)، ومنها القيد
+  الجزئي للتقرير اليدوي (`portal_id IS NULL`).
+- الحذف المتسلسل: حذف طالب/ة يحذف `year_data` و`hifz_history` و`monthly_submissions` — و
+  `monthly_tracking` أيضاً (في السحابة كانت تبقى يتيمة بلا FK)؛ حذف بوابة يحذف ترسيلاتها؛ حذف دورة
+  أو متدرب/ة يحذف التسجيلات.
+- الدالتان `open_teacher_portal` و`submit_teacher_monthly` منفذتان محلياً بنفس الفحوصات ورسائل الخطأ.
 
 ---
 
+# مرجع: مخطط Supabase الأصلي
+
 ## الملفات المرجعية
 
-| الملف                                | الدور                                                 |
-| ------------------------------------ | ----------------------------------------------------- |
-| `supabase/migrations/*.sql`          | مصدر الحقيقة لإنشاء المخطط من الصفر                   |
-| `src/integrations/supabase/types.ts` | أنواع العميل (`Database["public"]["Tables"]`)         |
-| `supabase/drop-all-tables.sql`       | حذف كل جداول `public` الـ 22 ودوالها ثم أي جدول متبقٍ |
-| `scripts/test-sql.mjs`               | اختبارات المخطط (117 اختباراً) على PGlite             |
-| `docs/دليل-نظام-المستخدمين.md`       | دليل تفعيل واستعمال نظام المستخدمين                   |
-| `docs/روابط-المعلمين-دليل.md`        | دليل بوابة المعلم/ة والوارد والتقرير اليدوي           |
-| `src/utils/sqliteClient.ts`          | سكيمة SQLite المحلية (مجموعة جزئية للكاش/الأوفلاين)   |
-| `src/utils/storage.ts`               | طبقة CRUD السحابية لجداول القرآن/المالية/المتابعة     |
-| `supabase/config.toml`               | `project_id = hzpvtmfgvddjkuzonict`                   |
+| الملف                                | الدور                                                   |
+| ------------------------------------ | ------------------------------------------------------- |
+| `supabase/migrations/*.sql`          | مصدر الحقيقة لإنشاء المخطط من الصفر                     |
+| `src/integrations/supabase/types.ts` | أنواع العميل (`Database["public"]["Tables"]`)           |
+| `supabase/drop-all-tables.sql`       | حذف كل جداول `public` الـ 22 ودوالها ثم أي جدول متبقٍ   |
+| `scripts/test-sql.mjs`               | اختبارات المخطط (117 اختباراً) على PGlite               |
+| `docs/روابط-المعلمين-دليل.md`        | دليل بوابة المعلم/ة والوارد والتقرير اليدوي             |
+| `src/offline/schema.ts`              | مخطط قاعدة بيانات المجلد المحلية (نفس الجداول والأعمدة) |
+| `src/utils/storage.ts`               | طبقة CRUD السحابية لجداول القرآن/المالية/المتابعة       |
+| `supabase/config.toml`               | `project_id = hzpvtmfgvddjkuzonict`                     |
 
 ### إعادة الإنشاء من الصفر
 
@@ -627,38 +661,24 @@ erDiagram
 
 ---
 
-## SQLite المحلية (ليست نسخة كاملة من السحابة)
-
-`src/utils/sqliteClient.ts` يخزّن كاشاً أوفلاين بأسماء مقاربة، **وليس** المخطط السحابي كاملاً:
-
-موجود محلياً: `students`, `hifz_history`, `year_data`, `teachers`, `teacher_bonuses`, `donors`, `awards`, `ceremony_expenses`, `certificates`, `media`، إضافة إلى جداول محلية فقط: `settings`, `meta`, `pending_changes`.
-
-جدول `students` المحلي يحمل الأعمدة العشرة الجديدة نفسها، وقائمة `MIGRATE_STUDENTS_COLS` في `src/utils/sqliteClient.ts` تضيفها تلقائياً لقواعد SQLite القائمة على الأجهزة (مع تجاهل خطأ «العمود موجود»).
-
-**غير موجود محلياً** (السحابة فقط): `monthly_tracking`, `monthly_submissions`, `teacher_portals`, `profiles`, `user_roles`, `data_access_grants`, `student_competitions`, `exam_questions`, `trainees`, `training_courses`, `training_enrollments`, و`user_settings` (يُستبدل بمخزن مفتاح/قيمة `settings`).
-
-لا تستخدم سكيمة SQLite كمرجع لإنشاء جداول Supabase.
-
----
-
 ## أين يُستخدم كل جدول في التطبيق
 
-| الجدول                                         | المدخل الرئيسي                                                                              |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `students`, `hifz_history`, `year_data`        | `src/utils/storage.ts`, صفحات الطلاب/التقارير/المسابقة                                      |
-| `teachers`, `teacher_bonuses`                  | `src/pages/Teachers.tsx`, `storage.ts`                                                      |
-| `user_settings`                                | `src/pages/Settings.tsx`, `storage.ts`                                                      |
-| `media`                                        | `src/pages/Media.tsx` + Storage                                                             |
-| `donors`                                       | `src/pages/Donors.tsx`                                                                      |
-| `awards`                                       | `src/pages/Awards.tsx`                                                                      |
-| `ceremony_expenses`                            | `src/pages/Expenses.tsx`                                                                    |
-| `certificates`                                 | `src/pages/Certificates.tsx`                                                                |
-| `monthly_tracking`                             | `src/pages/MonthlyTracking.tsx`, `MonthlyTrackingSearch.tsx`                                |
-| `student_competitions`                         | `src/pages/StudentCompetition.tsx`, `Management.tsx`                                        |
-| `exam_questions`                               | `src/pages/ExamQuestions.tsx`, `Management.tsx`                                             |
-| `trainees`                                     | `src/pages/Trainees.tsx`, `TrainingHome.tsx`                                                |
-| `training_courses`                             | `src/pages/Courses.tsx`, `TrainingHome.tsx`                                                 |
-| `training_enrollments`                         | `src/pages/Trainees.tsx`, `Courses.tsx`                                                     |
-| `profiles`, `user_roles`, `data_access_grants` | `src/pages/Users.tsx`, `src/utils/users.ts`, `src/utils/viewAs.ts`, `src/hooks/useAuth.tsx` |
-| `teacher_portals`                              | `src/pages/TeacherLinks.tsx`, `src/pages/TeacherPortal.tsx`, `src/utils/teacherPortal.ts`   |
-| `monthly_submissions`                          | `src/pages/Submissions.tsx`, `src/pages/TeacherPortal.tsx`, `src/utils/teacherPortal.ts`    |
+| الجدول                                  | المدخل الرئيسي                                                                                                    |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `students`, `hifz_history`, `year_data` | `src/utils/storage.ts`, صفحات الطلاب/التقارير/المسابقة                                                            |
+| `teachers`, `teacher_bonuses`           | `src/pages/Teachers.tsx`, `storage.ts`                                                                            |
+| `user_settings`                         | `src/pages/Settings.tsx`, `storage.ts`                                                                            |
+| `media`                                 | `src/pages/Media.tsx` + Storage                                                                                   |
+| `donors`                                | `src/pages/Donors.tsx`                                                                                            |
+| `awards`                                | `src/pages/Awards.tsx`                                                                                            |
+| `ceremony_expenses`                     | `src/pages/Expenses.tsx`                                                                                          |
+| `certificates`                          | `src/pages/Certificates.tsx`                                                                                      |
+| `monthly_tracking`                      | `src/pages/MonthlyTracking.tsx`, `MonthlyTrackingSearch.tsx`                                                      |
+| `student_competitions`                  | `src/pages/StudentCompetition.tsx`, `Management.tsx`                                                              |
+| `exam_questions`                        | `src/pages/ExamQuestions.tsx`, `Management.tsx`                                                                   |
+| `trainees`                              | `src/pages/Trainees.tsx`, `TrainingHome.tsx`                                                                      |
+| `training_courses`                      | `src/pages/Courses.tsx`, `TrainingHome.tsx`                                                                       |
+| `training_enrollments`                  | `src/pages/Trainees.tsx`, `Courses.tsx`                                                                           |
+| `profiles` (محلياً: الاسم الظاهر فقط)   | `src/utils/users.ts`, `src/hooks/useAuth.tsx` — `user_roles` و`data_access_grants` غير مستخدمين في النسخة المحلية |
+| `teacher_portals`                       | `src/pages/TeacherLinks.tsx`, `src/pages/TeacherPortal.tsx`, `src/utils/teacherPortal.ts`                         |
+| `monthly_submissions`                   | `src/pages/Submissions.tsx`, `src/pages/TeacherPortal.tsx`, `src/utils/teacherPortal.ts`                          |

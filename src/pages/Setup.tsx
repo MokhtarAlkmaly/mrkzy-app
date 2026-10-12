@@ -41,14 +41,17 @@ import type { BackendKind } from "@/offline/backends/types";
 import { SUGGESTED_FOLDER_NAME } from "@/offline/constants";
 import { useDbStatus } from "@/offline/useDbStatus";
 
+/** إلغاء المستخدم لنافذة الاختيار ليس خطأً يستحق رسالة. */
 const isAbortError = (err: unknown) =>
   (err instanceof DOMException && err.name === "AbortError") ||
-  (err instanceof Error && /cancel|abort|ألغ/i.test(err.message));
+  (typeof err === "object" && err !== null && (err as { code?: unknown }).code === "CANCELLED") ||
+  (err instanceof Error && /cancel|abort|إلغاء/i.test(err.message));
 
 const Setup = () => {
   const router = useRouter();
   const search = useSearch({ strict: false }) as { next?: string };
-  const next = search.next && search.next.startsWith("/") && !search.next.startsWith("//") ? search.next : "/";
+  const next =
+    search.next && search.next.startsWith("/") && !search.next.startsWith("//") ? search.next : "/";
   const { toast } = useToast();
   const status = useDbStatus();
 

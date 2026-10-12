@@ -58,7 +58,11 @@ import { BACKUPS_DIR, MAX_DAILY_BACKUPS, MEDIA_DIR } from "@/offline/constants";
 
 const formatTime = (ms: number | null) =>
   ms
-    ? new Date(ms).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    ? new Date(ms).toLocaleTimeString("ar", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
     : "—";
 
 const formatSize = (bytes?: number) => {
@@ -319,8 +323,16 @@ const Database = () => {
           )}
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <Button onClick={handleSaveNow} disabled={busy !== null} className="h-11 gap-2 rounded-2xl">
-              {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            <Button
+              onClick={handleSaveNow}
+              disabled={busy !== null}
+              className="h-11 gap-2 rounded-2xl"
+            >
+              {busy === "save" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
               حفظ الآن
             </Button>
             <Button
@@ -337,7 +349,11 @@ const Database = () => {
               إعادة القراءة من المجلد
             </Button>
             <Link to={`/setup?next=${encodeURIComponent("/database")}`}>
-              <Button variant="outline" className="h-11 w-full gap-2 rounded-2xl" disabled={busy !== null}>
+              <Button
+                variant="outline"
+                className="h-11 w-full gap-2 rounded-2xl"
+                disabled={busy !== null}
+              >
                 <FolderSync className="h-4 w-4" />
                 تغيير المجلد
               </Button>
@@ -356,8 +372,8 @@ const Database = () => {
           <p className="text-xs leading-relaxed text-muted-foreground">
             كل تعديل يُكتب في المجلد تلقائياً خلال لحظات. داخل المجلد: ملف لكل جدول (مثل{" "}
             <span dir="ltr">students.json</span>)، ومجلد <span dir="ltr">{BACKUPS_DIR}/</span> للنسخ
-            الاحتياطية، ومجلد <span dir="ltr">{MEDIA_DIR}/</span> للصور والفيديوهات. لنقل البيانات إلى
-            جهاز آخر انسخ المجلد كاملاً ثم اختره من «تغيير المجلد».
+            الاحتياطية، ومجلد <span dir="ltr">{MEDIA_DIR}/</span> للصور والفيديوهات. لنقل البيانات
+            إلى جهاز آخر انسخ المجلد كاملاً ثم اختره من «تغيير المجلد».
           </p>
         </Card>
 
@@ -402,7 +418,11 @@ const Database = () => {
             <span dir="ltr">{MEDIA_DIR}/</span>.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
-            <Button onClick={handleBackupNow} disabled={busy !== null} className="h-11 gap-2 rounded-2xl">
+            <Button
+              onClick={handleBackupNow}
+              disabled={busy !== null}
+              className="h-11 gap-2 rounded-2xl"
+            >
               {busy === "backup" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -439,7 +459,8 @@ const Database = () => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json,application/json"
+              // على أندرويد لا نقيّد النوع: بعض مديري الملفات يعرّفون ملفات JSON كنوع عام.
+              accept={isNativeApp() ? undefined : ".json,application/json"}
               className="hidden"
               onChange={handleImportFile}
             />
@@ -451,7 +472,12 @@ const Database = () => {
                 <History className="h-4 w-4 text-muted-foreground" />
                 النسخ الموجودة في المجلد
               </span>
-              <Button size="sm" variant="ghost" onClick={() => void refreshBackups()} className="gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void refreshBackups()}
+                className="gap-1"
+              >
                 <RefreshCw className={`h-3.5 w-3.5 ${loadingBackups ? "animate-spin" : ""}`} />
                 تحديث
               </Button>

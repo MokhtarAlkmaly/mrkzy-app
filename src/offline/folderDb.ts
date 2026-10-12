@@ -327,7 +327,10 @@ export class FolderDb {
       }
     }
 
-    const files = await backend.readTopLevelTexts([TABLE_FILE_EXT, `${TABLE_FILE_EXT}${TMP_SUFFIX}`]);
+    const files = await backend.readTopLevelTexts([
+      TABLE_FILE_EXT,
+      `${TABLE_FILE_EXT}${TMP_SUFFIX}`,
+    ]);
     const warnings: string[] = [];
     const stamp = nowIso().replace(/[:.]/g, "-");
 
@@ -338,7 +341,10 @@ export class FolderDb {
       try {
         const parsed = JSON.parse(text);
         if (isPlainObject(parsed)) {
-          manifest = { ...FolderDb.newManifest(), ...(parsed as Partial<DbManifest>) } as DbManifest;
+          manifest = {
+            ...FolderDb.newManifest(),
+            ...(parsed as Partial<DbManifest>),
+          } as DbManifest;
           break;
         }
       } catch {
@@ -626,7 +632,9 @@ export class FolderDb {
       name: "on_conflict",
       columns: conflictCols,
       where: this.constraintsFor(def).find(
-        (c) => c.columns.length === conflictCols.length && c.columns.every((x, i) => x === conflictCols[i]),
+        (c) =>
+          c.columns.length === conflictCols.length &&
+          c.columns.every((x, i) => x === conflictCols[i]),
       )?.where,
     };
 

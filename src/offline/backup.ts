@@ -122,6 +122,10 @@ export const exportBackupFile = async (): Promise<string> => {
     directory: Directory.Cache,
     encoding: Encoding.UTF8,
   });
-  await Share.share({ title: fileName, url: result.uri, dialogTitle: "حفظ/مشاركة النسخة الاحتياطية" });
+  await Share.share({
+    title: fileName,
+    url: result.uri,
+    dialogTitle: "حفظ/مشاركة النسخة الاحتياطية",
+  });
   return fileName;
 };

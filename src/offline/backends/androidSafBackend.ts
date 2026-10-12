@@ -55,14 +55,33 @@ export class AndroidSafBackend implements FolderBackend {
   }
 
   async writeBlob(path: string, data: Blob): Promise<void> {
-    const base64 = await blobToBase64(data);
+    const target = this.norm(path);
+    const mimeType = data.type || guessMimeType(path);
+    // الملفات الكبيرة (فيديو) تُكتب على دفعات حتى لا يُمرَّر الملف كاملاً عبر
+    // الجسر كنص base64 ضخم قد يستنفد الذاكرة على الأجهزة المتواضعة.
+    const CHUNK = 3 * 1024 * 1024; // مضاعف 3 حتى يبقى كل جزء base64 مستقلاً وصحيحاً
     await FolderDb.writeFile({
-      path: this.norm(path),
-      data: base64,
+      path: target,
+      data: await blobToBase64(data.slice(0, CHUNK)),
       encoding: "base64",
-      mimeType: data.type || guessMimeType(path),
+      mimeType,
       atomic: false,
     });
+    try {
+      for (let offset = CHUNK; offset < data.size; offset += CHUNK) {
+        await FolderDb.appendFile({
+          path: target,
+          data: await blobToBase64(data.slice(offset, offset + CHUNK)),
+        });
+      }
+    } catch (err) {
+      try {
+        await FolderDb.deleteFile({ path: target });
+      } catch {
+        /* أفضل محاولة */
+      }
+      throw err;
+    }
   }
 
   async readBlob(path: string): Promise<Blob | null> {

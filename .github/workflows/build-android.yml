@@ -67,6 +67,22 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
+      - name: فحص ملف APK (اسم الحزمة، التوقيع، إضافة المجلد)
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          PKG=$("$BT"/aapt2 dump packagename "$APK")
+          CERT=$("$BT"/apksigner verify --print-certs "$APK" | grep -m1 "certificate DN" || true)
+          FOUND=0
+          for DEX in $(unzip -Z1 "$APK" 'classes*.dex'); do
+            if unzip -p "$APK" "$DEX" | grep -aq "Lorg/inmaa/mrkzynet/FolderDbPlugin;"; then FOUND=1; fi
+          done
+          SIZE=$(du -h "$APK" | cut -f1)
+          echo "::notice title=APK::package=$PKG | size=$SIZE | FolderDbPlugin=$FOUND | $CERT"
+          test "$PKG" = "org.inmaa.mrkzynet"
+          test "$FOUND" = "1"
+          echo "$CERT" | grep -q "Mrkzy-net Debug"
+
       - name: تسمية الملف
         run: cp android/app/build/outputs/apk/debug/app-debug.apk mrkzy-net-offline.apk
 

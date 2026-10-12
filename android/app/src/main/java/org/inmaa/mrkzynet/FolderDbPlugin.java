@@ -551,6 +551,49 @@ public class FolderDbPlugin extends Plugin {
         });
     }
 
+    /**
+     * يُلحق بيانات (base64) بنهاية ملف موجود — لكتابة الملفات الكبيرة (فيديو) على
+     * دفعات صغيرة بدل تمرير الملف كاملاً عبر الجسر دفعة واحدة.
+     */
+    @PluginMethod
+    public void appendFile(PluginCall call) {
+        String path = call.getString("path", "");
+        String data = call.getString("data", "");
+        final byte[] bytes;
+        try {
+            bytes = Base64.decode(data, Base64.DEFAULT);
+        } catch (IllegalArgumentException e) {
+            call.reject("بيانات الملف غير صالحة", "BAD_DATA", e);
+            return;
+        }
+        try {
+            Uri tree = requireTree();
+            String id = resolveFile(tree, path);
+            if (id == null) throw new IOException("الملف غير موجود: " + path);
+            try (OutputStream os = resolver().openOutputStream(docUri(tree, id), "wa")) {
+                if (os == null) throw new IOException("تعذّر فتح الملف للإلحاق");
+                os.write(bytes);
+                os.flush();
+            }
+            call.resolve();
+        } catch (SecurityException e) {
+            call.reject("تعذّرت الكتابة في " + path + ": لا توجد صلاحية على المجلد", "PERMISSION", e);
+        } catch (Exception e) {
+            synchronized (dirCache) {
+                dirCache.clear();
+            }
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            call.reject("تعذّرت الكتابة في " + path + ": " + msg, "IO_ERROR", e);
+        }
+    }
+
+    /** يُشعر JavaScript عند انتقال التطبيق للخلفية ليحفظ أي تعديل معلّق فوراً. */
+    @Override
+    protected void handleOnPause() {
+        super.handleOnPause();
+        notifyListeners("appPause", new JSObject());
+    }
+
     @PluginMethod
     public void deleteFile(PluginCall call) {
         String path = call.getString("path", "");

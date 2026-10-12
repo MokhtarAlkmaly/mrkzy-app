@@ -71,7 +71,13 @@ class LocalRpcCall implements PromiseLike<LocalResponse> {
       }
       return { data, error: null, count: null, status: 200, statusText: "OK" };
     } catch (err) {
-      return { data: null, error: toPostgrestError(err), count: null, status: 400, statusText: "Bad Request" };
+      return {
+        data: null,
+        error: toPostgrestError(err),
+        count: null,
+        status: 400,
+        statusText: "Bad Request",
+      };
     }
   }
 

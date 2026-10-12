@@ -174,9 +174,13 @@ const installLifecycleHandlers = () => {
     if (document.visibilityState === "hidden") flushNow();
   });
   window.addEventListener("pagehide", flushNow);
-  // حدث Capacitor عند انتقال التطبيق للخلفية على أندرويد.
-  document.addEventListener("pause", flushNow);
   window.addEventListener("beforeunload", flushNow);
+  // على أندرويد: الإضافة الأصلية تُشعرنا عند انتقال التطبيق للخلفية.
+  if (isNativeApp()) {
+    void FolderDbPlugin.addListener("appPause", flushNow).catch(() => {
+      /* اختياري */
+    });
+  }
 };
 
 const openOpfs = async (): Promise<FolderBackend> => {

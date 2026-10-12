@@ -105,7 +105,11 @@ const Media = () => {
       const { error: uploadError } = await supabase.storage.from("media").upload(filePath, file);
       if (uploadError) {
         console.error(uploadError);
-        toast({ title: "تعذّر حفظ الملف", description: uploadError.message, variant: "destructive" });
+        toast({
+          title: "تعذّر حفظ الملف",
+          description: uploadError.message,
+          variant: "destructive",
+        });
         continue;
       }
 

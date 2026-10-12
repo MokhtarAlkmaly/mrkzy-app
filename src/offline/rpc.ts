@@ -30,9 +30,7 @@ const raise = (message: string): never => {
 
 const openTeacherPortal: RpcHandler = (db, args) => {
   const code = String(args.p_code ?? "");
-  const portal = db
-    .rowsRef("teacher_portals")
-    .find((p) => p.code === code && p.active === true);
+  const portal = db.rowsRef("teacher_portals").find((p) => p.code === code && p.active === true);
   if (!portal) return [];
 
   const yearStudentIds = new Set(

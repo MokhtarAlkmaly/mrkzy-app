@@ -12,11 +12,7 @@
  */
 
 export type BackendKind =
-  | "android-saf"
-  | "browser-folder"
-  | "browser-opfs"
-  | "browser-idb"
-  | "memory";
+  "android-saf" | "browser-folder" | "browser-opfs" | "browser-idb" | "memory";
 
 export interface FolderEntry {
   name: string;

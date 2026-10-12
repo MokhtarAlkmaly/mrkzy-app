@@ -776,7 +776,6 @@ const Settings = () => {
                     <Trash2 className="h-4 w-4" /> حذف كل البيانات
                   </Button>
                 </div>
-
               </div>
             </div>
           </div>

@@ -43,7 +43,8 @@ export const valuesEqual = (a: unknown, b: unknown): boolean => {
     return !Number.isNaN(na) && !Number.isNaN(nb) && na === nb;
   }
   if (typeof a === "boolean" || typeof b === "boolean") return String(a) === String(b);
-  if (typeof a === "object" || typeof b === "object") return JSON.stringify(a) === JSON.stringify(b);
+  if (typeof a === "object" || typeof b === "object")
+    return JSON.stringify(a) === JSON.stringify(b);
   return String(a) === String(b);
 };
 
@@ -125,9 +126,7 @@ const makeFilter = (column: string, op: string, value: unknown): Filter => {
           return value.every((v) => cell.some((c) => valuesEqual(c, v)));
         }
         if (cell && typeof cell === "object" && value && typeof value === "object") {
-          return Object.entries(value as Row).every(([k, v]) =>
-            valuesEqual((cell as Row)[k], v),
-          );
+          return Object.entries(value as Row).every(([k, v]) => valuesEqual((cell as Row)[k], v));
         }
         return false;
       };
@@ -200,7 +199,9 @@ export const parseSelect = (input: string): SelectItem[] => {
       alias = rest.slice(0, colonIdx).trim();
       rest = rest.slice(colonIdx + 1).trim();
     }
-    const embed = /^([A-Za-z0-9_]+)(?:![A-Za-z0-9_]+)?(?:!inner|!left)?\s*\(([\s\S]*)\)$/.exec(rest);
+    const embed = /^([A-Za-z0-9_]+)(?:![A-Za-z0-9_]+)?(?:!inner|!left)?\s*\(([\s\S]*)\)$/.exec(
+      rest,
+    );
     if (embed) {
       const [, table, inner] = embed;
       return { kind: "embed", table, alias: alias || table, items: parseSelect(inner || "*") };
@@ -288,7 +289,11 @@ function project(db: FolderDb, table: string, row: Row, items: SelectItem[]): Ro
     } else if (item.kind === "column") {
       const val = row[item.name];
       out[item.alias] =
-        val === undefined ? null : typeof val === "object" && val !== null ? cloneRow({ v: val }).v : val;
+        val === undefined
+          ? null
+          : typeof val === "object" && val !== null
+            ? cloneRow({ v: val }).v
+            : val;
     } else {
       let resolver = resolvers.get(item.alias);
       if (!resolver) {
@@ -599,7 +604,8 @@ export class LocalQueryBuilder implements PromiseLike<LocalResponse> {
   async execute(): Promise<LocalResponse> {
     try {
       const { data, count } = this.run();
-      const status = this.op === "insert" ? 201 : this.op === "select" || this.returning ? 200 : 204;
+      const status =
+        this.op === "insert" ? 201 : this.op === "select" || this.returning ? 200 : 204;
       return { data, error: null, count, status, statusText: "OK" };
     } catch (err) {
       const error = toPostgrestError(err);

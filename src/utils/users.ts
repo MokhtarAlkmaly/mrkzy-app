@@ -40,9 +40,7 @@ export interface SharedOwner {
 const NOT_AVAILABLE = "إدارة المستخدمين غير متاحة في النسخة التي تعمل بدون إنترنت (مستخدم واحد).";
 
 const localProfile = (): UserProfile => {
-  const row = db.isOpen()
-    ? db.rowsRef("profiles").find((p) => p.id === LOCAL_USER_ID)
-    : undefined;
+  const row = db.isOpen() ? db.rowsRef("profiles").find((p) => p.id === LOCAL_USER_ID) : undefined;
   return {
     id: LOCAL_USER_ID,
     email: (row?.email as string | null) ?? LOCAL_USER_EMAIL,

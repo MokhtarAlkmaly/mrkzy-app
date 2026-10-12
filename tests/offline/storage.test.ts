@@ -15,7 +15,7 @@ const backend = new MemoryBackend();
 let storage: typeof import("@/utils/storage");
 let portal: typeof import("@/utils/teacherPortal");
 let users: typeof import("@/utils/users");
-let db: typeof import("@/offline/dbManager")["db"];
+let db: (typeof import("@/offline/dbManager"))["db"];
 
 before(async () => {
   ({ db } = await import("@/offline/dbManager"));
@@ -35,7 +35,12 @@ test("إضافة طلاب وتسجيلهم في عام وقراءتهم كما �
   assert.equal(id1, 1);
   assert.equal(id2, 2);
   await storage.registerStudentInYear("1447", id1 as number, "أم خالد");
-  await storage.saveYearData("1447", id2 as number, { ...emptyYear(), teacher: "أم خالد", parts: "2", total: "88" });
+  await storage.saveYearData("1447", id2 as number, {
+    ...emptyYear(),
+    teacher: "أم خالد",
+    parts: "2",
+    total: "88",
+  });
   await storage.saveHifzHistory(id2 as number, { h1446: "5" });
 
   const list = await storage.loadAllStudentsWithData("1447");
@@ -46,15 +51,27 @@ test("إضافة طلاب وتسجيلهم في عام وقراءتهم كما �
   assert.equal(list.find((s) => s.id === id1)?.gender, "أنثى");
 
   // تعديل جزئي لا يمسح باقي حقول الملف
-  await storage.saveStudent({ id: id1 as number, name: "مريم علي", teacher: "أم خالد", notes: "متفوقة" });
+  await storage.saveStudent({
+    id: id1 as number,
+    name: "مريم علي",
+    teacher: "أم خالد",
+    notes: "متفوقة",
+  });
   const global = await storage.loadGlobalStudents();
   const mariam = global.find((s) => s.id === id1);
   assert.equal(mariam?.gender, "أنثى");
   assert.equal(mariam?.notes, "متفوقة");
 
   // تعديل بيانات العام نفسه لا ينشئ صفاً مكرراً
-  await storage.saveYearData("1447", id2 as number, { ...emptyYear(), teacher: "أم خالد", total: "90" });
-  assert.equal(db.all("year_data").filter((r) => r.student_id === id2 && r.year === "1447").length, 1);
+  await storage.saveYearData("1447", id2 as number, {
+    ...emptyYear(),
+    teacher: "أم خالد",
+    total: "90",
+  });
+  assert.equal(
+    db.all("year_data").filter((r) => r.student_id === id2 && r.year === "1447").length,
+    1,
+  );
 });
 
 test("العام النشط والإعدادات تُحفظ في المجلد", async () => {
@@ -87,7 +104,10 @@ test("المتابعة الشهرية: حفظ وقراءة وإعادة احتس
   };
   assert.equal(await storage.saveMonthlyRecord("1447", id, 1, record), true);
   // إعادة الحفظ لنفس الشهر تحدّث الصف ولا تكرره
-  assert.equal(await storage.saveMonthlyRecord("1447", id, 1, { ...record, attendanceScore: "10" }), true);
+  assert.equal(
+    await storage.saveMonthlyRecord("1447", id, 1, { ...record, attendanceScore: "10" }),
+    true,
+  );
   assert.equal(db.all("monthly_tracking").length, 1);
 
   const month = await storage.loadMonthlyTrackingForMonth("1447", 1);
@@ -109,7 +129,12 @@ test("المتابعة الشهرية: حفظ وقراءة وإعادة احتس
 });
 
 test("الخاتمون والخاتمات وفحص الاسم المكرر", async () => {
-  await storage.saveYearData("1446", 1, { ...emptyYear(), totalHifz: "30", total: "97", grade: "ممتاز" });
+  await storage.saveYearData("1446", 1, {
+    ...emptyYear(),
+    totalHifz: "30",
+    total: "97",
+    grade: "ممتاز",
+  });
   const k = await storage.loadKhatimat();
   assert.equal(k.length, 1);
   assert.equal(k[0].name, "مريم علي");
@@ -172,7 +197,11 @@ test("دمج الأسماء المكررة ينقل البيانات دون تع
 
 test("بوابة المعلم/ة والوارد والتقرير اليدوي", async () => {
   const uid = (await users.getMyProfile())?.id as string;
-  const created = await portal.createPortal(uid, { teacher_name: "أم خالد", year: "1447", month: 2 });
+  const created = await portal.createPortal(uid, {
+    teacher_name: "أم خالد",
+    year: "1447",
+    month: 2,
+  });
   assert.equal(created.active, true);
   assert.equal(portal.getPortalLink(created), `/teacher?t=${created.code}&y=1447&m=2`);
 
@@ -182,7 +211,13 @@ test("بوابة المعلم/ة والوارد والتقرير اليدوي", 
   const student = opened.portal?.students.find((s) => s.student_id === 2);
   assert.deepEqual(student?.prevMemo, { surah: 80, ayah: 42 });
 
-  const form = { ...portal.emptyForm(), memoFromSurah: "80", memoFromAyah: "43", memoHifz: "19", attendance: "10" };
+  const form = {
+    ...portal.emptyForm(),
+    memoFromSurah: "80",
+    memoFromAyah: "43",
+    memoHifz: "19",
+    attendance: "10",
+  };
   const rec = portal.formToRecord(form);
   const sent = await portal.submitTeacherMonthly({
     code: created.code,
@@ -259,7 +294,14 @@ test("حذف طالب/ة يحذف بياناته المرتبطة، وحذف ك�
 
   await storage.deleteAllData();
   await db.flush();
-  for (const t of ["students", "year_data", "hifz_history", "monthly_tracking", "teachers", "teacher_bonuses"]) {
+  for (const t of [
+    "students",
+    "year_data",
+    "hifz_history",
+    "monthly_tracking",
+    "teachers",
+    "teacher_bonuses",
+  ]) {
     assert.equal(parseTableText(String(backend.files.get(`${t}.json`))).length, 0, t);
   }
   // الإعدادات تبقى كما في النسخة السحابية

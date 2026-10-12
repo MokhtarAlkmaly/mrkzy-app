@@ -9,7 +9,7 @@
  * والكتابة داخله فقط — بدون صلاحية «كل الملفات» وبدون إنترنت.
  */
 
-import { registerPlugin } from "@capacitor/core";
+import { registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 
 export interface NativeFolderInfo {
   /** رابط شجرة SAF (content://...). */
@@ -54,10 +54,14 @@ export interface FolderDbPlugin {
     mimeType?: string;
     atomic?: boolean;
   }): Promise<void>;
+  /** يُلحق بيانات base64 بنهاية ملف موجود (كتابة الملفات الكبيرة على دفعات). */
+  appendFile(options: { path: string; data: string }): Promise<void>;
   deleteFile(options: { path: string }): Promise<void>;
   listDir(options: { path: string }): Promise<{ entries: NativeDirEntry[] }>;
   /** رابط content:// لملف داخل المجلد (لعرض الصور والفيديو). */
   getFileUri(options: { path: string }): Promise<{ uri: string | null }>;
+  /** حدث انتقال التطبيق للخلفية (لحفظ التعديلات المعلقة فوراً). */
+  addListener(eventName: "appPause", listener: () => void): Promise<PluginListenerHandle>;
 }
 
 export const FolderDb = registerPlugin<FolderDbPlugin>("FolderDb");

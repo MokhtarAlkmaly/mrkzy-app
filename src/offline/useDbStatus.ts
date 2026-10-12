@@ -6,4 +6,5 @@ const subscribe = (cb: () => void) => db.subscribe(cb);
 const getSnapshot = (): DbStatus => db.status;
 
 /** حالة قاعدة البيانات المحلية (المجلد، الحفظ، الأخطاء) — تتحدّث تلقائياً. */
-export const useDbStatus = (): DbStatus => useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+export const useDbStatus = (): DbStatus =>
+  useSyncExternalStore(subscribe, getSnapshot, getSnapshot);

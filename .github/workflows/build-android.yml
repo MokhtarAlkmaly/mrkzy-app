@@ -3,7 +3,8 @@ name: بناء تطبيق أندرويد (APK) — نسخة بدون إنترن�
 # يبني ملف APK جاهزًا للتثبيت، دون الحاجة لأي جهاز كمبيوتر أو Android Studio.
 # هذه النسخة لا تحتاج أي أسرار (Secrets) ولا Supabase: قاعدة البيانات مجلد على الجهاز.
 # طريقة الاستخدام: افتح تبويب Actions، شغّل هذا الـ workflow (أو ادفع تعديلاً إلى main)،
-# ثم حمّل الملف الناتج من قسم "Artifacts" أسفل صفحة التشغيل.
+# ثم حمّل الملف الناتج mrkzy-net-offline.apk من قسم "Artifacts" أسفل صفحة التشغيل
+# (يُرفع ملف APK مباشرة — بدون ملف zip — فيُثبَّت فور تنزيله على الجوال).
 
 on:
   workflow_dispatch:
@@ -14,18 +15,20 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # إصدار ثابت بدل ubuntu-latest (الذي ينتقل إلى Ubuntu 26 ابتداءً من 19 أكتوبر 2026)
+    # حتى لا يتغير محيط البناء فجأة.
+    runs-on: ubuntu-24.04
     steps:
       - name: سحب المشروع
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: تثبيت Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: تثبيت Java (مطلوب لبناء أندرويد)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
@@ -87,7 +90,8 @@ jobs:
         run: cp android/app/build/outputs/apk/debug/app-debug.apk mrkzy-net-offline.apk
 
       - name: رفع ملف APK كمرفق للتحميل
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: mrkzy-net-offline-apk
           path: mrkzy-net-offline.apk
+          # بدون ضغط: يظهر المرفق باسم mrkzy-net-offline.apk ويُنزَّل كملف APK مباشرة.
+          archive: false

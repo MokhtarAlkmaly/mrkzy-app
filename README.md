@@ -118,7 +118,7 @@ npm run dev          # ثم افتح http://localhost:8080 واختر «التخ
 1. ارفع المشروع إلى مستودع GitHub.
 2. تبويب **Actions** ← workflow باسم «بناء تطبيق أندرويد (APK) — نسخة بدون إنترنت» ← **Run workflow**
    (ويعمل تلقائياً أيضاً مع كل دفع إلى `main`).
-3. بعد انتهاء التشغيل (3–5 دقائق) حمّل `mrkzy-net-offline-apk` من قسم **Artifacts** — بداخله `mrkzy-net-offline.apk`.
+3. بعد انتهاء التشغيل (3–5 دقائق) حمّل `mrkzy-net-offline.apk` من قسم **Artifacts** — يُنزَّل ملف APK مباشرة (بدون zip).
 4. ثبّته على الجهاز (فعّل «السماح بالتثبيت من مصادر غير معروفة» إن طُلب).
 
 - معرّف التطبيق `org.inmaa.mrkzynet` واسمه «مركز إنماء بدون إنترنت»، فيمكن تثبيته **بجانب** النسخة السحابية.
@@ -127,14 +127,24 @@ npm run dev          # ثم افتح http://localhost:8080 واختر «التخ
 
 ## نقل هذا المشروع إلى مستودع Mrkzy-net
 
-من Termux (أو أي جهاز فيه git) بعد إنشاء المستودع الفارغ `MokhtarAlkmaly/Mrkzy-net` على GitHub:
+من Termux (أو أي جهاز فيه git) بعد إنشاء المستودع `MokhtarAlkmaly/Mrkzy-net` على GitHub:
 
 ```sh
-git clone --branch arena/90874ed2-mrkzy-app https://github.com/MokhtarAlkmaly/mrkzy-app.git Mrkzy-net
+# مرة واحدة: تثبيت git و gh وتسجيل الدخول (يفتح المتصفح ويطلب رمزاً قصيراً — بدون كلمة مرور)
+pkg install -y git gh
+gh auth login --hostname github.com --git-protocol https --web
+gh auth setup-git
+
+# النسخ ثم الرفع إلى Mrkzy-net
+git clone --branch arena/90874ed2-mrkzy-app --single-branch https://github.com/MokhtarAlkmaly/mrkzy-app.git Mrkzy-net
 cd Mrkzy-net
 git remote set-url origin https://github.com/MokhtarAlkmaly/Mrkzy-net.git
 git push -u origin HEAD:main
 ```
+
+- إن أُنشئ المستودع ومعه ملف README فسيرفض الرفع؛ أضف `--force` إلى أمر `git push` (يستبدل ذلك الملف).
+- بعد الرفع يبدأ بناء ملف APK تلقائياً في تبويب **Actions** داخل Mrkzy-net.
+- **لا تدمج هذا الفرع في `main` الخاص بـ mrkzy-app** — النسخة السحابية تبقى كما هي.
 
 ## أسئلة الاختبارات ونماذج الاختبار
 

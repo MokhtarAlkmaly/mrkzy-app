@@ -31,7 +31,7 @@ import {
   Trash2,
   UsersRound,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { CenterHeader } from "@/components/CenterHeader";
 import { END_YEAR, START_YEAR, Student } from "@/types/student";
 import {
   deleteStudentFromYear,
@@ -260,51 +260,38 @@ const Halaqat = () => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img
-                src={logo}
-                alt="شعار المركز"
-                className="h-14 w-14 rounded-2xl bg-white/95 p-1 object-contain"
-              />
-              <div>
-                <h1 className="flex items-center gap-2 text-2xl font-black">
-                  <UsersRound className="h-6 w-6" /> إدارة الحلقات
-                </h1>
-                <p className="mt-1 text-sm text-white/75">
-                  ربط الطلاب بالمعلمين والمعلمات وإدارة حلقات كل عام بشكل مستقل
-                </p>
-              </div>
-            </div>
-            <Link to="/">
-              <Button variant="ghost" className="gap-1 text-primary-foreground">
-                <ArrowRight className="h-4 w-4" /> السجل الرئيسي
-              </Button>
-            </Link>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
-            <CalendarDays className="h-5 w-5 text-amber-300" />
-            <span className="font-semibold">العام النشط</span>
-            <Select value={year} onValueChange={(value) => void handleYearChange(value)}>
-              <SelectTrigger className="h-9 w-28 rounded-xl border-white/20 bg-white/10 font-bold text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {YEARS.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}هـ
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="mr-auto rounded-full bg-white/10 px-3 py-1 text-xs">
-              {students.length} طالب في العام
-            </span>
-          </div>
+      <CenterHeader
+        title="إدارة الحلقات"
+        icon={UsersRound}
+        subtitle="ربط الطلاب بالمعلمين والمعلمات وإدارة حلقات كل عام بشكل مستقل"
+        actions={
+          <Link to="/">
+            <Button variant="ghost" className="gap-1 text-primary-foreground">
+              <ArrowRight className="h-4 w-4" /> السجل الرئيسي
+            </Button>
+          </Link>
+        }
+      >
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
+          <CalendarDays className="h-5 w-5 text-amber-300" />
+          <span className="font-semibold">العام النشط</span>
+          <Select value={year} onValueChange={(value) => void handleYearChange(value)}>
+            <SelectTrigger className="h-9 w-28 rounded-xl border-white/20 bg-white/10 font-bold text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {YEARS.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}هـ
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="mr-auto rounded-full bg-white/10 px-3 py-1 text-xs">
+            {students.length} طالب في العام
+          </span>
         </div>
-      </header>
+      </CenterHeader>
 
       <main className="container mx-auto max-w-7xl space-y-5 px-3 py-5 sm:px-4 sm:py-7">
         {viewAs && (

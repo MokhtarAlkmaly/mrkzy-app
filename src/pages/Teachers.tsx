@@ -31,7 +31,7 @@ import {
   GraduationCap,
   BookOpenCheck,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { CenterHeader } from "@/components/CenterHeader";
 import { START_YEAR, END_YEAR } from "@/types/student";
 import {
   getActiveYear,
@@ -338,22 +338,11 @@ const Teachers = () => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <img src={logo} alt="الشعار" className="h-16 w-auto" />
-          </div>
-          <div className="text-center">
-            <p className="text-xs opacity-80">مركز إنماء الأهلي الخيري</p>
-            <h1 className="text-2xl font-bold flex items-center justify-center gap-2 mt-1">
-              <Users className="h-6 w-6" /> المعلمون والمعلمات
-            </h1>
-            <p className="text-sm opacity-90 mt-1">
-              جميع الأعوام — {filteredTeachers.length} معلم/معلمة
-            </p>
-          </div>
-        </div>
-      </header>
+      <CenterHeader
+        title="المعلمون والمعلمات"
+        icon={Users}
+        subtitle={`جميع الأعوام — ${filteredTeachers.length} معلم/معلمة`}
+      />
 
       <div className="container mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-7 space-y-4">
         {/* بطاقات إحصائية سريعة */}

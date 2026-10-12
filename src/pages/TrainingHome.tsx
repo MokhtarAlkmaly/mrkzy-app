@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSignOut } from "@/hooks/useSignOut";
 import { Link } from "@/lib/router-compat";
 import { Users, BookMarked, ArrowLeftRight, LogOut } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { CenterHeader } from "@/components/CenterHeader";
 import { supabase } from "@/integrations/supabase/client";
 
 const TrainingHome = () => {
@@ -53,43 +53,39 @@ const TrainingHome = () => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(24_90%_55%/0.16),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-amber-600 via-orange-700 to-rose-900 px-4 py-6 text-white shadow-2xl shadow-amber-900/20">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex items-center justify-between mb-3">
-            <img src={logo} alt="الشعار" className="h-16 w-auto" />
-            <div className="flex items-center gap-1">
-              <Link to="/">
-                <Button variant="ghost" size="sm" className="text-white gap-1">
-                  <ArrowLeftRight className="h-4 w-4" /> تبديل القسم
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white gap-1"
-                onClick={() => void signOut()}
-              >
-                <LogOut className="h-4 w-4" /> خروج
+      <CenterHeader
+        variant="training"
+        title="التدريب والتأهيل"
+        subtitle="الدورات التعليمية والمهنية والمتدربون"
+        actions={
+          <>
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="text-white gap-1">
+                <ArrowLeftRight className="h-4 w-4" /> تبديل القسم
               </Button>
-            </div>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white gap-1"
+              onClick={() => void signOut()}
+            >
+              <LogOut className="h-4 w-4" /> خروج
+            </Button>
+          </>
+        }
+      >
+        <div className="mt-4 flex justify-center gap-6 text-sm">
+          <div className="text-center">
+            <div className="text-xl font-bold">{traineesCount ?? "—"}</div>
+            <div className="opacity-80">متدرب/ة</div>
           </div>
           <div className="text-center">
-            <p className="text-xs opacity-80">مركز إنماء الأهلي الخيري</p>
-            <h1 className="text-2xl sm:text-3xl font-bold mt-1">التدريب والتأهيل</h1>
-            <p className="text-sm opacity-90 mt-2">الدورات التعليمية والمهنية والمتدربون</p>
-          </div>
-          <div className="mt-4 flex justify-center gap-6 text-sm">
-            <div className="text-center">
-              <div className="text-xl font-bold">{traineesCount ?? "—"}</div>
-              <div className="opacity-80">متدرب/ة</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold">{activeCoursesCount ?? "—"}</div>
-              <div className="opacity-80">دورة نشطة</div>
-            </div>
+            <div className="text-xl font-bold">{activeCoursesCount ?? "—"}</div>
+            <div className="opacity-80">دورة نشطة</div>
           </div>
         </div>
-      </header>
+      </CenterHeader>
 
       <div className="container mx-auto max-w-7xl px-3 py-6 sm:px-4 space-y-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

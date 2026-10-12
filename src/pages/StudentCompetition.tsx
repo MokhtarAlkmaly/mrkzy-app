@@ -20,7 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@/lib/router-compat";
 import {
-  ArrowRight,
   Plus,
   Pencil,
   Trash2,
@@ -30,7 +29,7 @@ import {
   Globe2,
   Home as HomeIcon,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { CenterHeader } from "@/components/CenterHeader";
 import { Student, START_YEAR, END_YEAR } from "@/types/student";
 import { loadGlobalStudents, getActiveYear, setActiveYear } from "@/utils/storage";
 import { supabase } from "@/integrations/supabase/client";
@@ -203,27 +202,13 @@ const StudentCompetition = ({ type }: Props) => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-5 text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex items-center justify-between mb-4">
-            <Link to="/students">
-              <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
-                <ArrowRight className="h-4 w-4" /> رجوع لصفحة الطلاب والطالبات
-              </Button>
-            </Link>
-            <img src={logo} alt="الشعار" className="h-16 w-auto" />
-            <div className="w-20" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
-              <Icon className="h-6 w-6" /> {title}
-            </h1>
-            <p className="text-sm opacity-90 mt-1">
-              عام {currentYear}هـ — {rows.length} سجل
-            </p>
-          </div>
-        </div>
-      </header>
+      <CenterHeader
+        title={title}
+        icon={Icon}
+        backTo="/students"
+        backLabel="رجوع لصفحة الطلاب والطالبات"
+        subtitle={`عام ${currentYear}هـ — ${rows.length} سجل`}
+      />
 
       <div className="container mx-auto max-w-7xl px-3 py-5 sm:px-4 sm:py-7 space-y-4">
         <div className="flex flex-wrap gap-3 items-center justify-between">

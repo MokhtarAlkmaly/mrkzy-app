@@ -22,19 +22,20 @@ import {
   FileText,
   ArrowLeftRight,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { CenterHeader } from "@/components/CenterHeader";
+import { QURAN_DEPARTMENT_NAME } from "@/utils/centerInfo";
 import { getActiveYear, loadGlobalStudents, loadTeachers } from "@/utils/storage";
 
 const Home = () => {
   const { isAdmin } = useAuth();
   const signOut = useSignOut();
-  const [year, setYear] = useState("");
   const [studentsCount, setStudentsCount] = useState<number | null>(null);
   const [teachersCount, setTeachersCount] = useState<number | null>(null);
 
   const load = useCallback(async () => {
+    // العام النشط يُستخدم لجلب المعلمين المرتبطين به فقط — ولا يُعرض في
+    // الترويسة، لأن السجل الرئيسي شامل لكل الأعوام.
     const y = await getActiveYear();
-    setYear(y);
     const [students, teachers] = await Promise.all([loadGlobalStudents(), loadTeachers(y)]);
     setStudentsCount(students.length);
     setTeachersCount(teachers.length);
@@ -150,45 +151,40 @@ const Home = () => {
       className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.14),transparent_34rem),linear-gradient(180deg,hsl(var(--background)),hsl(var(--secondary)/0.45))]"
       dir="rtl"
     >
-      <header className="mx-3 mt-3 rounded-[2rem] bg-gradient-to-br from-primary via-emerald-700 to-teal-950 px-4 py-6 text-primary-foreground shadow-2xl shadow-primary/20">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex items-center justify-between mb-3">
-            <img src={logo} alt="الشعار" className="h-16 w-auto" />
-            <div className="flex items-center gap-1">
-              <Link to="/">
-                <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
-                  <ArrowLeftRight className="h-4 w-4" /> تبديل القسم
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-primary-foreground gap-1"
-                onClick={() => void signOut()}
-              >
-                <LogOut className="h-4 w-4" /> خروج
+      <CenterHeader
+        title={QURAN_DEPARTMENT_NAME}
+        subtitle="السجل الشامل لكل الأعوام"
+        actions={
+          <>
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="text-primary-foreground gap-1">
+                <ArrowLeftRight className="h-4 w-4" /> تبديل القسم
               </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-primary-foreground gap-1"
+              onClick={() => void signOut()}
+            >
+              <LogOut className="h-4 w-4" /> خروج
+            </Button>
+          </>
+        }
+      >
+        {(studentsCount !== null || teachersCount !== null) && (
+          <div className="mt-4 flex justify-center gap-6 text-sm">
+            <div className="text-center">
+              <div className="text-xl font-bold">{studentsCount ?? "—"}</div>
+              <div className="opacity-80">طالب/طالبة</div>
+            </div>
+            <div className="text-center">
+              <div className="text-xl font-bold">{teachersCount ?? "—"}</div>
+              <div className="opacity-80">معلم/معلمة</div>
             </div>
           </div>
-          <div className="text-center">
-            <p className="text-xs opacity-80">مركز إنماء الأهلي الخيري</p>
-            <h1 className="text-2xl sm:text-3xl font-bold mt-1">قسم القرآن الكريم</h1>
-            <p className="text-sm opacity-90 mt-2">نظام إدارة الطلاب والطالبات — عام {year}هـ</p>
-          </div>
-          {(studentsCount !== null || teachersCount !== null) && (
-            <div className="mt-4 flex justify-center gap-6 text-sm">
-              <div className="text-center">
-                <div className="text-xl font-bold">{studentsCount ?? "—"}</div>
-                <div className="opacity-80">طالب/طالبة</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold">{teachersCount ?? "—"}</div>
-                <div className="opacity-80">معلم/معلمة</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
+        )}
+      </CenterHeader>
 
       <div className="container mx-auto max-w-7xl px-3 py-6 sm:px-4 space-y-5">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

@@ -55,6 +55,8 @@ import {
   registerStudentInYear,
 } from "@/utils/storage";
 import { getPendingChanges } from "@/utils/localDB";
+import { useArabicDates } from "@/hooks/useArabicDates";
+import { QURAN_DEPARTMENT_NAME } from "@/utils/centerInfo";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSignOut } from "@/hooks/useSignOut";
@@ -518,18 +520,11 @@ const Index = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [students.length, dataYearKey]);
 
-  const now = new Date();
-  const currentDate = now.toLocaleDateString("ar-EG", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const dayName = now.toLocaleDateString("ar-EG", { weekday: "long" });
-  const hijriDate = now.toLocaleDateString("ar-SA-u-ca-islamic-umalqura", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // التواريخ بتوقيت اليمن، وتتجدّد تلقائياً عند تغيّر اليوم (كما في بقية الصفحات).
+  const arabicDates = useArabicDates();
+  const currentDate = arabicDates.gregorianDate;
+  const dayName = arabicDates.dayName;
+  const hijriDate = arabicDates.hijriDate;
   const activeStudents = students.filter((s) => {
     const parts = parseFloat(s.yearData?.parts || "0");
     const total = parseFloat(s.yearData?.total || "0");
@@ -569,7 +564,7 @@ const Index = () => {
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs text-white/90 ring-1 ring-white/15">
                   <Sparkles className="h-3.5 w-3.5 text-islamic-gold" />
-                  نظام إدارة المسابقة
+                  {QURAN_DEPARTMENT_NAME}
                 </div>
                 <p className="mt-3 text-lg font-black leading-relaxed text-islamic-gold drop-shadow-sm sm:text-2xl">
                   بسم الله الرحمن الرحيم

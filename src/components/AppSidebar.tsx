@@ -39,6 +39,9 @@ import {
   EyeOff,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { SidebarAccountFooter } from "@/components/SidebarAccountFooter";
+import { flushLocalDatabase } from "@/hooks/useLocalDatabase";
+import { confirmCacheReset } from "@/hooks/useSignOut";
 
 interface NavItem {
   to: string;
@@ -135,25 +138,31 @@ const ViewAsSwitcher = () => {
 
   if (!viewAs && sharedWithMe.length === 0) return null;
 
-  const enter = (ownerId: string, name: string, email: string | null) => {
+  // نحفظ أي كتابات محلية مؤجَّلة قبل إعادة التحميل حتى لا يضيع آخر تعديل.
+  const enter = async (ownerId: string, name: string, email: string | null) => {
+    // الدخول لوضع الاطلاع يستبدل الكاش المحلي ببيانات المالك: نرفع تعديلاتي
+    // المعلّقة أولاً حتى لا تضيع.
+    if (!(await confirmCacheReset("الانتقال للاطلاع على بيانات مستخدم آخر"))) return;
+    await flushLocalDatabase();
     setViewAs({ id: ownerId, name, email });
     if (typeof window !== "undefined") window.location.reload();
   };
 
-  const exit = () => {
+  const exit = async () => {
+    await flushLocalDatabase();
     setViewAs(null);
     if (typeof window !== "undefined") window.location.reload();
   };
 
   return (
-    <div className="rounded-lg border bg-muted/40 p-2">
+    <div className="rounded-lg border bg-muted/40 p-2 group-data-[collapsible=icon]:hidden">
       {viewAs ? (
         <>
           <p className="mb-1.5 px-1 text-[10px] font-bold text-amber-600">
             تطالع بيانات: {viewAs.name}
           </p>
           <Button
-            onClick={exit}
+            onClick={() => void exit()}
             variant="ghost"
             size="sm"
             className="w-full justify-center gap-2 text-amber-700 hover:bg-amber-500/15"
@@ -170,7 +179,7 @@ const ViewAsSwitcher = () => {
           {sharedWithMe.map((owner) => (
             <Button
               key={owner.owner_id}
-              onClick={() => enter(owner.owner_id, owner.name, owner.email)}
+              onClick={() => void enter(owner.owner_id, owner.name, owner.email)}
               variant="ghost"
               size="sm"
               className="w-full justify-start gap-2"
@@ -211,8 +220,9 @@ export function AppSidebar() {
         />
         <NavGroup label="" items={switchItems} pathname={pathname} />
       </SidebarContent>
-      <SidebarFooter className="group-data-[collapsible=icon]:hidden">
+      <SidebarFooter>
         <ViewAsSwitcher />
+        <SidebarAccountFooter />
       </SidebarFooter>
     </Sidebar>
   );

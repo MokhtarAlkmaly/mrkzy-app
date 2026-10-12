@@ -1019,7 +1019,7 @@ const Students = () => {
               </div>
             </div>
 
-            <div className="max-h-[72vh] overflow-auto">
+            <div className="table-scroll max-h-[60vh] overflow-auto md:max-h-[72vh]">
               <table className="w-full min-w-[1220px] border-separate border-spacing-0 text-sm">
                 <thead className="sticky top-0 z-20 bg-gradient-to-l from-primary via-emerald-700 to-teal-800 text-primary-foreground shadow-md">
                   <tr>

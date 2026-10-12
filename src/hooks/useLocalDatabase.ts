@@ -26,6 +26,22 @@ export const initLocalDatabase = (): Promise<void> => {
   return initPromise;
 };
 
+/**
+ * يحفظ فوراً أي كتابات محلية مؤجَّلة (الحفظ إلى IndexedDB مجمَّع ومؤجَّل
+ * لأجل الأداء). استدعِها قبل `window.location.reload()` أو أي مغادرة متعمَّدة
+ * للصفحة. لا تحمّل SQLite إن لم تكن قد هُيّئت أصلاً.
+ */
+export const flushLocalDatabase = async (): Promise<void> => {
+  if (!initPromise) return;
+  try {
+    await initPromise;
+    const { persistNow } = await import("@/utils/sqliteClient");
+    await persistNow();
+  } catch (err) {
+    console.error("تعذّر حفظ قاعدة البيانات المحلية قبل المغادرة", err);
+  }
+};
+
 /** يشغّل تهيئة قاعدة البيانات المحلية مرة واحدة عند تركيب المكوّن. */
 export const useLocalDatabase = () => {
   useEffect(() => {

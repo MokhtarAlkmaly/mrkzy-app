@@ -57,6 +57,7 @@ import {
 import { getPendingChanges } from "@/utils/localDB";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useSignOut } from "@/hooks/useSignOut";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -102,7 +103,8 @@ const Index = () => {
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
   const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const signOut = useSignOut();
 
   const isDirty = Object.keys(dirtyMap).length > 0;
 
@@ -594,7 +596,7 @@ const Index = () => {
               <div>{hijriDate}</div>
               <div>{currentDate}</div>
               <Button
-                onClick={signOut}
+                onClick={() => void signOut()}
                 variant="ghost"
                 size="sm"
                 className="mt-1 justify-center gap-1 rounded-full text-white/80 hover:bg-white/10 hover:text-white print:hidden"
@@ -778,7 +780,13 @@ const Index = () => {
                 )}
               </Button>
 
-              <RecallStudents currentYear={currentYear} onRecalled={loadData} />
+              {/* dataYearKey وليس currentYear: في مسابقة ذي الحجة يُسجَّل الطلاب في
+                  مفتاح "1447D" لا في عام رمضان. */}
+              <RecallStudents
+                targetYear={dataYearKey}
+                onRecalled={loadData}
+                buttonClassName="h-12 gap-2 rounded-2xl lg:col-span-2"
+              />
 
               <Button onClick={handlePrint} variant="secondary" className="h-12 gap-2 rounded-2xl">
                 <Printer className="h-4 w-4" />

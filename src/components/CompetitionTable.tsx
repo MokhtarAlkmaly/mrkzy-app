@@ -490,7 +490,7 @@ export const CompetitionTable = ({
             </span>
           </div>
         </div>
-        <div className="max-h-[72vh] overflow-auto">
+        <div className="table-scroll max-h-[60vh] overflow-auto md:max-h-[72vh]">
           <table className="w-full min-w-[1400px] table-fixed border-separate border-spacing-0 bg-card text-sm whitespace-nowrap">
             <TableHeader
               currentYear={currentYear}

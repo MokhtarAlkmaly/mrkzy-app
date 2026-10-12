@@ -352,6 +352,26 @@ export const getCachedStudents = () => getAllItems<CachedStudent>(STORES.student
 export const deleteCachedStudent = (id: number) => deleteItem(STORES.students, id);
 export const putCachedStudent = (student: CachedStudent) => putItem(STORES.students, student);
 
+/**
+ * هل يحتوي الكاش المحلي على طالب/ة يخص حساباً آخر غير userId؟
+ * (قاعدة البيانات المحلية مشتركة بين كل الحسابات على نفس الجهاز.)
+ * استعلام بصف واحد فقط بدل تحميل جدول الطلاب كاملاً لفحص الملكية.
+ */
+export const hasForeignCachedStudents = async (userId: string): Promise<boolean> => {
+  const db = await getDB();
+  const res = await db.query(`SELECT 1 FROM ${STORES.students} WHERE user_id IS NOT ? LIMIT 1`, [
+    userId,
+  ]);
+  return (res.values?.length ?? 0) > 0;
+};
+
+/** هل جدول الطلاب المحلي غير فارغ؟ (بدون تحميل أي صف فعلياً). */
+export const hasAnyCachedStudent = async (): Promise<boolean> => {
+  const db = await getDB();
+  const res = await db.query(`SELECT 1 FROM ${STORES.students} LIMIT 1`);
+  return (res.values?.length ?? 0) > 0;
+};
+
 // ========== Hifz History ==========
 
 export interface CachedHifzRow {

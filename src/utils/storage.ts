@@ -729,6 +729,70 @@ export const loadAllStudentsAllYears = async (): Promise<StudentAllYears[]> => {
     .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
 };
 
+export interface TeacherYearAssignment {
+  student_id: number;
+  name: string;
+  /** العام الذي سُجّل فيه الطالب/ة مع المعلم/المعلمة (فارغ إذا لم يُسجَّل في أي عام). */
+  year: string;
+  teacher: string;
+  yearData: YearData;
+}
+
+/**
+ * يجمع ارتباطات المعلمين بالطلاب من جميع الأعوام (بدون تصفية بالعام).
+ * يشمل الطلاب الذين لهم معلم في الملف الشخصي دون أي سجل عام كمدخل بعام فارغ.
+ */
+export const loadTeacherAssignmentsAllYears = async (): Promise<TeacherYearAssignment[]> => {
+  await ensureCache();
+  const students = await getCachedStudents();
+  const allYearData = await getCachedYearData();
+  const studentById = new Map(students.map((s) => [s.id, s]));
+  const withYearRows = new Set<number>();
+  const out: TeacherYearAssignment[] = [];
+
+  for (const row of allYearData) {
+    const s = studentById.get(row.student_id);
+    if (!s) continue;
+    withYearRows.add(row.student_id);
+    const teacher = (row.teacher || "").trim();
+    if (!teacher) continue;
+    out.push({
+      student_id: row.student_id,
+      name: s.name,
+      year: row.year,
+      teacher,
+      yearData: {
+        baseHifz: row.base_hifz,
+        totalHifz: row.total_hifz,
+        parts: row.parts,
+        annual: row.annual,
+        recitation: row.recitation,
+        memorization: row.memorization,
+        total: row.total,
+        grade: row.grade,
+        prize: row.prize,
+        statusPrize: row.status_prize,
+        rank: row.rank,
+        teacher,
+      },
+    });
+  }
+
+  for (const s of students) {
+    const teacher = (s.teacher || "").trim();
+    if (!teacher || withYearRows.has(s.id)) continue;
+    out.push({
+      student_id: s.id,
+      name: s.name,
+      year: "",
+      teacher,
+      yearData: { ...emptyYearData(), teacher },
+    });
+  }
+
+  return out.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+};
+
 // ===== Save to LOCAL cache only (not cloud) =====
 export const saveStudent = async (
   student: {

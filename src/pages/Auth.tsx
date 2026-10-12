@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, isPasswordRecoveryPending } from "@/hooks/useAuth";
 import { getAuthEmailRedirect } from "@/utils/authRedirect";
-import logo from "@/assets/logo.png";
+import { LogoBadge } from "@/components/LogoBadge";
 import {
   AlertTriangle,
   CloudUpload,
@@ -383,9 +383,7 @@ const Auth = () => {
         {/* نموذج الدخول */}
         <div className="p-6 sm:p-8">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="rounded-3xl bg-primary/5 p-3 ring-1 ring-primary/10">
-              <img src={logo} alt="شعار مركز إنماء الأهلي الخيري" className="h-20 w-auto" />
-            </div>
+            <LogoBadge size="xl" goldRing alt="شعار مركز إنماء الأهلي الخيري" />
             <div>
               <h1 className="text-xl font-black text-primary sm:text-2xl">
                 مركز إنماء الأهلي الخيري

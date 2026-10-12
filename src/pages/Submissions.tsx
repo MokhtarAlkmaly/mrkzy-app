@@ -19,6 +19,7 @@ import {
   FilePlus2,
   BadgeCheck,
   Save,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,8 +38,10 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { PortalFormFields } from "@/components/PortalFormFields";
+import { useArabicDates } from "@/hooks/useArabicDates";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { CENTER_NAME } from "@/utils/centerInfo";
 import {
   getActiveYear,
   loadStudentsForYear,
@@ -335,6 +338,7 @@ const SubmissionCard = ({
 const Submissions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const dates = useArabicDates();
   const userId = user?.id || "";
 
   const [subs, setSubs] = useState<Submission[]>([]);
@@ -589,7 +593,8 @@ const Submissions = () => {
         {/* الترويسة */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="flex items-center gap-2 text-xl font-black text-white">
+            <p className="text-base font-black text-emerald-300">{CENTER_NAME}</p>
+            <h1 className="mt-1 flex items-center gap-2 text-xl font-black text-white">
               <Inbox className="h-5 w-5 text-amber-300" />
               وارد المعلمين والمعلمات
               {pending > 0 && (
@@ -601,6 +606,24 @@ const Submissions = () => {
             <p className="mt-1 text-xs text-white/50">
               ترسيلات المعلمين والمعلمات من بواباتهم — راجعها واعتمدها لتُكتب في المتابعة الشهرية.
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-white/70">
+              {dates.dayName ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/15">
+                  <CalendarDays className="h-3 w-3 text-emerald-300" />
+                  {dates.dayName}
+                </span>
+              ) : null}
+              {dates.hijriDate ? (
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/15">
+                  {dates.hijriDate}
+                </span>
+              ) : null}
+              {dates.gregorianDate ? (
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 ring-1 ring-white/15">
+                  {dates.gregorianDate}
+                </span>
+              ) : null}
+            </div>
           </div>
           <Button
             onClick={() => {

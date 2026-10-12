@@ -5,7 +5,7 @@ import { useAuth, isPasswordRecoveryPending } from "@/hooks/useAuth";
 import { getSafeNextPath } from "@/utils/authRedirect";
 
 const title = "تسجيل الدخول - مركز إنماء الأهلي الخيري";
-const description = "الدخول إلى نظام إدارة مركز إنماء الأهلي الخيري: قسم القرآن الكريم والتدريب.";
+const description = "الدخول إلى مركز إنماء الأهلي الخيري: قسم القرآن الكريم وقسم التدريب والتأهيل.";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,

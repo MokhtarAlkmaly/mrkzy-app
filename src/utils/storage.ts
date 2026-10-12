@@ -63,6 +63,8 @@ import {
   CachedCeremonyExpense,
   CachedCertificate,
   CachedMedia,
+  hasForeignCachedStudents,
+  hasAnyCachedStudent,
 } from "./localDB";
 import { markDirty, getPendingChanges, clearPending, remapPendingStudentId } from "./localDB";
 import { normalizeStudentName } from "./studentNames";
@@ -91,6 +93,13 @@ type YearDataCloudRow = {
 type MonthlyTrackingRow = Database["public"]["Tables"]["monthly_tracking"]["Row"];
 
 // ===== Helper: get cached user =====
+/**
+ * مفتاح إعداد محلي يحفظ معرّف صاحب الكاش (الحساب الذي نُزّلت بياناته).
+ * قاعدة البيانات المحلية مشتركة بين كل الحسابات على نفس الجهاز، فيُستعمل
+ * هذا المفتاح لاكتشاف كاش يخص حساباً آخر واستبداله قبل عرض أي بيانات.
+ */
+const CACHE_USER_SETTING = "cache_user_id";
+
 let cachedAuthUserId: string | null = null;
 let knownUserId: string | null = null;
 let cacheResetInFlight: Promise<void> | null = null;
@@ -191,6 +200,44 @@ const newLocalId = () => {
   });
 };
 
+/**
+ * الفحص الكامل للكاش — يُنفَّذ مرة واحدة لكل هوية (انظر ensureCache):
+ *  1. إن كان الكاش يخص حساباً آخر (تسجيل دخول حساب مختلف على نفس الجهاز،
+ *     أو تبديل وضع الاطلاع) يُمسح فوراً قبل عرض أي شيء، ثم يُنزَّل كاش
+ *     الحساب الحالي من السحابة إن توفّر اتصال.
+ *  2. الكاش القديم بلا مالك مسجَّل يُعتمد فقط إن كانت كل صفوفه للحساب الحالي.
+ *  3. إن لم يُنزَّل الكاش بعد، يُنزَّل من السحابة.
+ */
+const runEnsureCache = async (userId: string): Promise<boolean> => {
+  if (cacheResetInFlight) await cacheResetInFlight;
+
+  const [hasCache, cacheOwner, containsAnotherUsersStudents] = await Promise.all([
+    isCachePopulated(),
+    getCachedSetting<string>(CACHE_USER_SETTING),
+    hasForeignCachedStudents(userId),
+  ]);
+
+  if ((cacheOwner && cacheOwner !== userId) || containsAnotherUsersStudents) {
+    clearSessionCache();
+    if (cacheResetInFlight) await cacheResetInFlight;
+    return isOnline() ? syncFromCloud() : false;
+  }
+
+  // اعتماد كاش قديم (من قبل إضافة مفتاح المالك) دون تنزيل غير ضروري،
+  // بعد التأكد أعلاه أن كل الطلاب فيه يخصون الحساب الحالي.
+  if (!cacheOwner && (await hasAnyCachedStudent())) {
+    await setCachedSetting(CACHE_USER_SETTING, userId);
+  }
+
+  if (hasCache) return true;
+  return isOnline() ? syncFromCloud() : false;
+};
+
+/**
+ * ensureCache يُستدعى في مقدمة دوال القراءة، وكل شاشة تستدعي عدة دوال.
+ * الفحص يتم مرة واحدة لكل هوية مستخدم، ويُعاد استخدام نفس الوعد للنداءات
+ * المتوازية، ويُبطَل عند تسجيل الخروج أو تبديل الحساب/وضع الاطلاع.
+ */
 let ensureCachePromise: Promise<void> | null = null;
 let ensureCacheUserId: string | null = null;
 
@@ -209,16 +256,18 @@ const ensureCache = async () => {
   }
 
   ensureCacheUserId = userId;
-  const run = (async () => {
-    const hasCache = await isCachePopulated();
-    if (!hasCache) {
-      await syncFromCloud();
-    }
-  })().catch((error) => {
-    // لا نُبقي على وعد فاشل: المحاولة القادمة يجب أن تعيد الفحص.
-    if (ensureCachePromise === run) invalidateEnsureCache();
-    throw error;
-  });
+  const run: Promise<void> = runEnsureCache(userId).then(
+    (ready) => {
+      // كاش لم يُنزَّل بعد (لا اتصال أو فشل التنزيل): لا نحفظ النتيجة، حتى
+      // يُعاد الفحص والتنزيل تلقائياً في القراءة التالية بعد عودة الاتصال.
+      if (!ready && ensureCachePromise === run) invalidateEnsureCache();
+    },
+    (error) => {
+      // لا نُبقي على وعد فاشل: المحاولة القادمة يجب أن تعيد الفحص.
+      if (ensureCachePromise === run) invalidateEnsureCache();
+      throw error;
+    },
+  );
   ensureCachePromise = run;
   return run;
 };
@@ -279,7 +328,22 @@ const profileToStudent = (row: Record<string, unknown>): Required<StudentProfile
 // ===== Initial sync: download all data from cloud to local =====
 export type ProgressCb = (current: number, total: number, label?: string) => void;
 
+let syncFromCloudInFlight: Promise<boolean> | null = null;
+
+/**
+ * تنزيل كامل من السحابة. النداءات المتزامنة (عدة شاشات أو مكوّنات تطلب
+ * التنزيل في نفس اللحظة) تشترك في عملية واحدة بدل تنزيل كل البيانات مرات.
+ */
 export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
+  if (syncFromCloudInFlight) return syncFromCloudInFlight;
+
+  syncFromCloudInFlight = runSyncFromCloud(onProgress).finally(() => {
+    syncFromCloudInFlight = null;
+  });
+  return syncFromCloudInFlight;
+};
+
+const runSyncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
   const userId = await getUserId();
   if (!canUseCloud(userId)) return false;
 
@@ -392,6 +456,10 @@ export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> =
     onProgress?.(10, 11, "حفظ بيانات الوسائط");
     await cacheMedia((mediaRes.data || []) as CachedMedia[]);
 
+    // تسجيل صاحب الكاش بعد اكتمال تنزيل كل بياناته فقط، حتى تكتشف الجلسة
+    // القادمة أي كاش يخص حساباً آخر وتستبدله.
+    await setCachedSetting(CACHE_USER_SETTING, userId);
+
     // Cache active year
     const { data: settingsData } = await supabase
       .from("user_settings")
@@ -413,10 +481,8 @@ export const syncFromCloud = async (onProgress?: ProgressCb): Promise<boolean> =
 
 // ===== Load students with data from LOCAL cache =====
 export const loadAllStudentsWithData = async (currentYear: string): Promise<Student[]> => {
-  const hasCache = await isCachePopulated();
-  if (!hasCache) {
-    await syncFromCloud();
-  }
+  // يتحقق من ملكية الكاش (ويُنزّله إن لزم) قبل قراءة أي طالب/ة.
+  await ensureCache();
 
   const students = await getCachedStudents();
   const allHistory = await getCachedHifzHistory();
@@ -504,13 +570,25 @@ export interface RecallCandidate {
   years: string[];
 }
 
-// الطلاب والطالبات الموجودون في أعوام أخرى وغير مسجّلين في العام المختار
+/**
+ * ترتيب زمني لمفاتيح الأعوام: مسابقة رمضان في عام ما تسبق مسابقة عشر ذي
+ * الحجة من العام نفسه، وتليها رمضان العام التالي: "1447" < "1447D" < "1448".
+ */
+const yearRank = (key: string) => (parseInt(key) || 0) * 10 + (key.endsWith("D") ? 5 : 0);
+
+/**
+ * المرشحون للاستدعاء إلى عام: كل طلاب وطالبات السجل الشامل غير المسجّلين في
+ * ذلك العام — من الأعوام السابقة، أو المضافين للسجل دون أي عام بعد.
+ * الحفظ السابق المرحَّل = آخر إجمالي تراكمي قبل العام المستهدف (زمنياً، فمسابقة
+ * ذي الحجة 1447 ترث حفظ رمضان 1447)، أو الحفظ الأولي لمن لا أعوام سابقة له.
+ */
 export const listRecallCandidates = async (year: string): Promise<RecallCandidate[]> => {
   await ensureCache();
   const students = await getCachedStudents();
   const allYearData = await getCachedYearData();
   const allHistory = await getCachedHifzHistory();
   const yearNum = parseInt(year);
+  const targetRank = yearRank(year);
 
   const byStudent = new Map<number, typeof allYearData>();
   allYearData.forEach((row) => {
@@ -530,9 +608,8 @@ export const listRecallCandidates = async (year: string): Promise<RecallCandidat
     const rows = byStudent.get(s.id) || [];
     if (rows.some((r) => r.year === year)) continue;
     const previous = rows
-      .filter((r) => parseInt(r.year) < yearNum)
-      .sort((a, b) => a.year.localeCompare(b.year));
-    if (previous.length === 0) continue;
+      .filter((r) => yearRank(r.year) < targetRank)
+      .sort((a, b) => yearRank(a.year) - yearRank(b.year));
 
     const history = { ...(historyMap[s.id] || {}) };
     previous.forEach((r) => {
@@ -543,24 +620,26 @@ export const listRecallCandidates = async (year: string): Promise<RecallCandidat
       }
     });
 
-    const last = previous[previous.length - 1];
-    const lastTotalHifz = parseFloat(last.total_hifz) || 0;
+    const last = previous.length > 0 ? previous[previous.length - 1] : null;
+    const lastTotalHifz = last
+      ? parseFloat(last.total_hifz) || 0
+      : parseFloat(s.initial_hifz || "0") || 0;
     const baseHifz = resolveBaseHifz(history, yearNum, lastTotalHifz);
 
     candidates.push({
       id: s.id,
       name: s.name,
-      teacher: last.teacher || s.teacher || "",
-      lastYear: last.year,
+      teacher: last?.teacher || s.teacher || "",
+      lastYear: last?.year || s.first_competition_year || "سجل عام",
       baseHifz,
-      years: rows.map((r) => r.year).sort(),
+      years: rows.map((r) => r.year).sort((a, b) => yearRank(a) - yearRank(b)),
     });
   }
 
   return candidates.sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
 };
 
-// استدعاء طلاب وطالبات من الأعوام السابقة إلى العام المختار مع ترحيل الحفظ التراكمي
+// استدعاء طلاب وطالبات من السجل الشامل إلى العام المختار مع ترحيل الحفظ التراكمي
 export const recallStudentsToYear = async (year: string, ids: number[]): Promise<number> => {
   guardWrite();
   const candidates = await listRecallCandidates(year);
@@ -589,6 +668,7 @@ export const registerStudentInYear = async (year: string, studentId: number, tea
 };
 
 export const loadGlobalStudents = async (): Promise<Student[]> => {
+  await ensureCache();
   const students = await getCachedStudents();
   return students.map((s) => ({
     id: s.id,
@@ -605,10 +685,7 @@ export interface StudentAllYears extends Student {
 
 // سجل رئيسي شامل: كل الطلاب والطالبات المسجلين في كل الأعوام (وليس عامًا بعينه)
 export const loadAllStudentsAllYears = async (): Promise<StudentAllYears[]> => {
-  const hasCache = await isCachePopulated();
-  if (!hasCache) {
-    await syncFromCloud();
-  }
+  await ensureCache();
 
   const students = await getCachedStudents();
   const allYearData = await getCachedYearData();
@@ -1697,6 +1774,27 @@ export const deleteMediaMetadataLocal = async (id: string) => {
   queueCloudSync();
 };
 
+/**
+ * يرفع التعديلات المحلية المعلّقة قبل أي عملية تمسح الكاش المحلي (تسجيل
+ * الخروج، أو الدخول لوضع الاطلاع على بيانات مستخدم آخر)، ويُرجع عدد
+ * التعديلات التي بقيت دون رفع (مثلاً لعدم وجود اتصال) حتى تُعرض على
+ * المستخدم قبل حذفها.
+ */
+export const flushPendingChanges = async (): Promise<number> => {
+  // في وضع الاطلاع لا توجد تعديلات خاصة بالمستخدم (الكتابة ممنوعة).
+  if (isViewingOtherUser()) return 0;
+  const pending = await getPendingChanges();
+  if (pending.length === 0) return 0;
+  if (isOnline()) {
+    try {
+      await syncToCloud();
+    } catch (error) {
+      console.error("تعذّر رفع التعديلات المعلّقة:", error);
+    }
+  }
+  return (await getPendingChanges()).length;
+};
+
 // ===== SYNC TO CLOUD: called when user clicks "Save" =====
 let syncInFlight: Promise<boolean> | null = null;
 
@@ -1818,14 +1916,11 @@ const runSyncToCloud = async (onProgress?: ProgressCb): Promise<boolean> => {
         if (inserted.id !== local.id) {
           const oldId = local.id;
           const newId = inserted.id;
-          // Update local caches
+          // Update local caches — مع الإبقاء على كل حقول ملف الطالب/ة
+          // (الجنس، الهواتف، الملاحظات، الأعمدة المخصصة...). إسقاطها هنا كان
+          // يُفرغها محلياً بعد أول رفع، ثم يمسحها من السحابة عند أي تعديل لاحق.
           await deleteCachedStudent(oldId);
-          await putCachedStudent({
-            id: newId,
-            name: local.name,
-            teacher: local.teacher,
-            user_id: userId,
-          });
+          await putCachedStudent({ ...local, id: newId, user_id: userId });
           local.id = newId;
           // Move related history & year_data rows to new id locally
           const { deleteItem, putItem } = await import("./localDB");

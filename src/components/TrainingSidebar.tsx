@@ -13,6 +13,7 @@ import {
 import { Link, useLocation } from "@/lib/router-compat";
 import { LayoutGrid, Users, BookMarked, ArrowLeftRight } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { SidebarAccountFooter } from "@/components/SidebarAccountFooter";
 
 const items = [
   { to: "/training", label: "الرئيسية", icon: LayoutGrid },
@@ -67,7 +68,9 @@ export function TrainingSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter>
+        <SidebarAccountFooter />
+      </SidebarFooter>
     </Sidebar>
   );
 }

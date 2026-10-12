@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useSignOut } from "@/hooks/useSignOut";
 import { Link } from "@/lib/router-compat";
 import { Users, BookMarked, ArrowLeftRight, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
 
 const TrainingHome = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const signOut = useSignOut();
   const [traineesCount, setTraineesCount] = useState<number | null>(null);
   const [activeCoursesCount, setActiveCoursesCount] = useState<number | null>(null);
 

@@ -46,7 +46,10 @@ import {
   getPreviousMonthEndPoints,
   getMonthlyRankings,
   getLatestTrackedPeriod,
+  getActiveYear,
+  setActiveYear,
 } from "@/utils/storage";
+import { RecallStudents } from "@/components/RecallStudents";
 import { getSurahList, getAyahCount, calcPagesBetweenAsync } from "@/utils/quranData";
 
 const emptyPoint = (): QuranPoint => ({ surah: null, ayah: null });
@@ -118,7 +121,8 @@ const MonthlyTracking = () => {
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<string>("الكل");
-  const [year, setYear] = useState<string>(START_YEAR.toString());
+  // يُحدَّد من العام النشط عند فتح الصفحة (انظر التأثير أدناه).
+  const [year, setYear] = useState<string>("");
   const [month, setMonth] = useState<number>(1);
   const [records, setRecords] = useState<Record<number, MonthlyRecord>>({});
   const [dirty, setDirty] = useState<Record<number, MonthlyRecord>>({});
@@ -136,6 +140,7 @@ const MonthlyTracking = () => {
   const [memoPagesMap, setMemoPagesMap] = useState<Record<number, number>>({});
 
   const loadData = useCallback(async () => {
+    if (!year) return;
     setLoading(true);
     const [yearStudents, monthData, ranks] = await Promise.all([
       loadAllStudentsWithData(year),
@@ -166,17 +171,26 @@ const MonthlyTracking = () => {
     loadData();
   }, [loadData]);
 
-  // عند فتح الصفحة أول مرة: افتح تلقائياً على آخر عام وشهر تم تسجيل
-  // متابعة فيهما فعلياً. إذا ما فيه أي تسجيل سابق، تبقى القيمة الافتراضية
-  // (أول عام 1441، الشهر الأول) كما هي.
+  // تبدأ الصفحة من العام النشط (المختار في باقي صفحات النظام) — لا من أول عام
+  // 1441 — مع فتح آخر شهر سُجّلت فيه متابعة إن كان داخل العام النشط نفسه.
   useEffect(() => {
-    getLatestTrackedPeriod().then((latest) => {
-      if (latest) {
-        setYear(latest.year);
-        setMonth(latest.month);
-      }
-    });
+    let cancelled = false;
+    void (async () => {
+      const [activeYear, latest] = await Promise.all([getActiveYear(), getLatestTrackedPeriod()]);
+      if (cancelled) return;
+      setYear(activeYear || START_YEAR.toString());
+      if (latest && latest.year === activeYear) setMonth(latest.month);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // تغيير العام هنا يغيّر العام النشط لكل الصفحات (كما في باقي صفحات الأعوام).
+  const handleYearChange = (value: string) => {
+    setYear(value);
+    void setActiveYear(value);
+  };
 
   const getRecord = (studentId: number): MonthlyRecord =>
     dirty[studentId] || records[studentId] || emptyRecord();
@@ -423,7 +437,7 @@ const MonthlyTracking = () => {
           <div className="flex items-center gap-2 rounded-2xl bg-primary/10 px-3 py-2 text-sm text-primary ring-1 ring-primary/10">
             <CalendarDays className="h-4 w-4" />
             <span className="font-semibold">العام</span>
-            <Select value={year} onValueChange={setYear}>
+            <Select value={year} onValueChange={handleYearChange}>
               <SelectTrigger className="h-9 w-24 rounded-xl border-primary/20 bg-background font-bold">
                 <SelectValue />
               </SelectTrigger>
@@ -438,6 +452,12 @@ const MonthlyTracking = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <RecallStudents
+            targetYear={year}
+            onRecalled={loadData}
+            buttonClassName="h-9 gap-1.5 rounded-2xl text-xs font-bold"
+          />
 
           <div className="flex items-center gap-2 rounded-2xl bg-secondary px-3 py-2 text-sm ring-1 ring-primary/10">
             <span className="font-semibold">الشهر</span>
@@ -508,7 +528,7 @@ const MonthlyTracking = () => {
           ) : visibleStudents.length === 0 ? (
             <Card className="border-primary/20 p-10 text-center text-muted-foreground">
               {selectedTeacher === "الكل"
-                ? `لا يوجد طلاب وطالبات مسجّلون بعام هـ (سجّلهم أولاً بالجدول الرئيسي)`
+                ? `لا يوجد طلاب وطالبات مسجّلون بعام ${year}هـ — استدعهم من السجل الشامل بالزر أعلاه أو سجّلهم بالجدول الرئيسي`
                 : `لا يوجد طلاب وطالبات لدى المعلم/المعلمة ${selectedTeacher} بعام ${year}هـ`}
             </Card>
           ) : (

@@ -1,11 +1,11 @@
 import { Link } from "@/lib/router-compat";
-import { useAuth } from "@/hooks/useAuth";
+import { useSignOut } from "@/hooks/useSignOut";
 import { Button } from "@/components/ui/button";
 import { BookOpenText, Scissors, LogOut } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 const DepartmentSelect = () => {
-  const { signOut } = useAuth();
+  const signOut = useSignOut();
 
   return (
     <div

@@ -12,15 +12,36 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { History, Loader2, Users } from "lucide-react";
-import { listRecallCandidates, recallStudentsToYear, RecallCandidate } from "@/utils/storage";
+import {
+  listRecallCandidates,
+  recallStudentsToYear,
+  ReadOnlyViewError,
+  type RecallCandidate,
+} from "@/utils/storage";
+import { formatYearKey, formatYearKeyShort } from "@/types/student";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
-  currentYear: string;
+  /** مفتاح العام المستهدف: "1447" لمسابقة رمضان أو "1447D" لمسابقة عشر ذي الحجة. */
+  targetYear: string;
   onRecalled: () => void | Promise<void>;
+  /** شكل الزر (حجم/تنسيق) حسب الصفحة المستضيفة. */
+  buttonClassName?: string;
+  buttonVariant?: "secondary" | "outline" | "default" | "ghost";
 }
 
-export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
+/**
+ * زر وحوار «استدعاء من السجل الشامل»: يسجّل طلاباً وطالبات من السجل (كل
+ * الأعوام) في العام المختار مع ترحيل حفظهم التراكمي كـ«حفظ سابق».
+ * متاح في كل صفحات الأعوام (المسابقة، المتابعة الشهرية، الجوائز، الشهادات،
+ * المعلمون) حتى لا يضطر المستخدم للتنقل لصفحة أخرى عند بدء عام جديد.
+ */
+export const RecallStudents = ({
+  targetYear,
+  onRecalled,
+  buttonClassName = "h-12 gap-2 rounded-2xl",
+  buttonVariant = "secondary",
+}: Props) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,14 +51,15 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !targetYear) return;
     setLoading(true);
     setSelected([]);
     setQuery("");
-    listRecallCandidates(currentYear)
+    listRecallCandidates(targetYear)
       .then(setCandidates)
+      .catch(() => setCandidates([]))
       .finally(() => setLoading(false));
-  }, [open, currentYear]);
+  }, [open, targetYear]);
 
   const filtered = useMemo(() => {
     const q = query.trim();
@@ -63,17 +85,19 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
     if (selected.length === 0) return;
     setSaving(true);
     try {
-      const added = await recallStudentsToYear(currentYear, selected);
+      const added = await recallStudentsToYear(targetYear, selected);
       toast({
         title: "تم الاستدعاء",
-        description: `تم استدعاء ${added} طالب/طالبة إلى عام ${currentYear}هـ مع ترحيل الحفظ السابق`,
+        description: `تم استدعاء ${added} طالب/طالبة من السجل الشامل إلى ${formatYearKey(
+          targetYear,
+        )} مع ترحيل الحفظ السابق`,
       });
       setOpen(false);
       await onRecalled();
     } catch (e) {
       toast({
         title: "خطأ",
-        description: "تعذّر استدعاء الطلاب والطالبات",
+        description: e instanceof ReadOnlyViewError ? e.message : "تعذّر استدعاء الطلاب والطالبات",
         variant: "destructive",
       });
     } finally {
@@ -84,17 +108,17 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="h-12 gap-2 rounded-2xl lg:col-span-2">
+        <Button variant={buttonVariant} className={buttonClassName} disabled={!targetYear}>
           <History className="h-4 w-4" />
-          استدعاء طالب/طالبة من الأعوام السابقة
+          استدعاء من السجل الشامل
         </Button>
       </DialogTrigger>
       <DialogContent dir="rtl" className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>استدعاء طلاب وطالبات إلى عام {currentYear}هـ</DialogTitle>
+          <DialogTitle>استدعاء طلاب وطالبات إلى {formatYearKey(targetYear)}</DialogTitle>
           <DialogDescription>
-            اختر الطلاب والطالبات من الأعوام السابقة، وسيتم تسجيلهم في العام المختار مع نقل الإجمالي
-            التراكمي كـ«حفظ سابق».
+            اختر الطلاب والطالبات من السجل الشامل (كل الأعوام)، وسيتم تسجيلهم في العام المختار مع
+            نقل الإجمالي التراكمي كـ«حفظ سابق».
           </DialogDescription>
         </DialogHeader>
 
@@ -111,7 +135,9 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
           </div>
         ) : filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            لا يوجد طلاب وطالبات في أعوام سابقة غير مسجّلين في هذا العام
+            {query.trim()
+              ? "لا توجد نتائج مطابقة للبحث"
+              : "لا يوجد طلاب وطالبات غير مسجّلين في هذا العام — كل طلاب السجل الشامل موجودون بالفعل"}
           </p>
         ) : (
           <>
@@ -131,16 +157,35 @@ export const RecallStudents = ({ currentYear, onRecalled }: Props) => {
               {filtered.map((c) => (
                 <label
                   key={c.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg p-2 text-sm hover:bg-secondary/50"
+                  className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-lg p-2 text-sm hover:bg-secondary/50"
                 >
                   <Checkbox
                     checked={selected.includes(c.id)}
                     onCheckedChange={() => toggle(c.id)}
                   />
-                  <span className="flex-1 font-semibold">{c.name || "بدون اسم"}</span>
+                  <span className="min-w-0 flex-1 font-semibold">{c.name || "بدون اسم"}</span>
                   <span className="text-xs text-muted-foreground">{c.teacher || "—"}</span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-                    آخر عام: {c.lastYear}هـ
+                  {/* الأعوام المسجَّل بها (ذو الحجة بلون مميز)، أو «جديد بالسجل» */}
+                  <span className="flex max-w-[180px] flex-wrap items-center justify-end gap-1">
+                    {c.years.length > 0 ? (
+                      c.years.map((y) => (
+                        <span
+                          key={y}
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            y.endsWith("D")
+                              ? "bg-teal-500/15 text-teal-700 dark:text-teal-300"
+                              : "bg-secondary"
+                          }`}
+                          title={formatYearKey(y)}
+                        >
+                          {formatYearKeyShort(y)}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                        جديد بالسجل
+                      </span>
+                    )}
                   </span>
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
                     حفظ سابق: {c.baseHifz}

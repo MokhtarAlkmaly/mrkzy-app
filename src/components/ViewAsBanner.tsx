@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, LogOut, Loader2 } from "lucide-react";
+import { flushLocalDatabase } from "@/hooks/useLocalDatabase";
 
 /**
  * شريط ثابت يظهر أعلى الصفحة أثناء الاطلاع على بيانات مستخدم آخر،
@@ -13,8 +14,10 @@ export const ViewAsBanner = () => {
 
   if (!viewAs) return null;
 
-  const exit = () => {
+  const exit = async () => {
     setLeaving(true);
+    // حفظ أي كتابات محلية مؤجَّلة قبل إعادة التحميل.
+    await flushLocalDatabase();
     setViewAs(null);
     // إعادة تحميل كاملة لضمان تفريغ كل البيانات المعروضة من الذاكرة.
     if (typeof window !== "undefined") window.location.reload();
@@ -33,7 +36,7 @@ export const ViewAsBanner = () => {
         <Button
           size="sm"
           variant="ghost"
-          onClick={exit}
+          onClick={() => void exit()}
           disabled={leaving}
           className="h-7 gap-1 rounded-full bg-amber-950/10 px-3 text-amber-950 hover:bg-amber-950/20"
         >

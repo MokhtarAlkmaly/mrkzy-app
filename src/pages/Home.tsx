@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useSignOut } from "@/hooks/useSignOut";
 import { Link } from "@/lib/router-compat";
 import {
   GraduationCap,
@@ -25,7 +26,8 @@ import logo from "@/assets/logo.png";
 import { getActiveYear, loadGlobalStudents, loadTeachers } from "@/utils/storage";
 
 const Home = () => {
-  const { signOut, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
+  const signOut = useSignOut();
   const [year, setYear] = useState("");
   const [studentsCount, setStudentsCount] = useState<number | null>(null);
   const [teachersCount, setTeachersCount] = useState<number | null>(null);

@@ -150,7 +150,6 @@ export const StudentReport = ({ student }: Props) => {
         </div>
         <div class="student-info">
           <div><strong>الطالب/الطالبة:</strong> ${esc(student.name)}</div>
-          <div><strong>المعلم/المعلمة:</strong> ${esc(student.teacher)}</div>
         </div>
         <table>
           <thead><tr>
@@ -228,9 +227,6 @@ export const StudentReport = ({ student }: Props) => {
               <div className="student-info">
                 <div>
                   <strong>الطالب/الطالبة:</strong> {student.name}
-                </div>
-                <div>
-                  <strong>المعلم/المعلمة:</strong> {student.teacher}
                 </div>
               </div>
               <table>

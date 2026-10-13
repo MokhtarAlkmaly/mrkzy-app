@@ -1,14 +1,5 @@
 import { Student } from "@/types/student";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
 import { StudentReport } from "@/components/StudentReport";
 import { useState, useEffect, useCallback } from "react";
 import { resolveBaseHifz, calculateGrade, calculatePrize } from "@/utils/calculations";
@@ -18,22 +9,13 @@ interface Props {
   student: Student;
   index: number;
   currentYear: string;
-  onDelete: (id: number) => void;
   onDirtyChange: (
     studentId: number,
-    data: { name: string; teacher: string; history: HifzHistory; yearData: YearData },
+    data: { name: string; history: HifzHistory; yearData: YearData },
   ) => void;
-  teacherNames?: string[];
 }
 
-export const TableRow = ({
-  student,
-  index,
-  currentYear,
-  onDelete,
-  onDirtyChange,
-  teacherNames = [],
-}: Props) => {
+export const TableRow = ({ student, index, currentYear, onDirtyChange }: Props) => {
   const currentYearNum = parseInt(currentYear);
   const [name, setName] = useState(student.name);
   const [history, setHistory] = useState<HifzHistory>(student.hifzHistory || {});
@@ -110,7 +92,6 @@ export const TableRow = ({
 
       onDirtyChange(student.id, {
         name: newName,
-        teacher: newYearData.teacher,
         history: newHistory,
         yearData: updatedYearData,
       });
@@ -121,12 +102,6 @@ export const TableRow = ({
   const updateName = (value: string) => {
     setName(value);
     notifyDirty(value, history, yearData);
-  };
-
-  const updateTeacher = (value: string) => {
-    const updated = { ...yearData, teacher: value };
-    setYearData(updated);
-    notifyDirty(name, history, updated);
   };
 
   const updateYearField = (field: keyof YearData, value: string) => {
@@ -148,28 +123,6 @@ export const TableRow = ({
           placeholder="الاسم"
           className="h-10 rounded-xl border-0 bg-background/70 text-center font-semibold focus-visible:ring-1"
         />
-      </td>
-
-      <td className="border-b border-l border-border/70 p-1">
-        <Select
-          value={yearData.teacher || "__none__"}
-          onValueChange={(v) => updateTeacher(v === "__none__" ? "" : v)}
-        >
-          <SelectTrigger className="h-10 w-full min-w-[120px] rounded-xl border-0 bg-background/70 text-center focus:ring-1">
-            <SelectValue placeholder="المعلم/المعلمة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">— بدون —</SelectItem>
-            {yearData.teacher && !teacherNames.includes(yearData.teacher) && (
-              <SelectItem value={yearData.teacher}>{yearData.teacher} (غير مسجلة)</SelectItem>
-            )}
-            {teacherNames.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </td>
 
       <td className="border-b border-l border-border/70 bg-accent/20 p-1 text-center font-bold">
@@ -276,17 +229,6 @@ export const TableRow = ({
 
       <td className="border-b border-l border-border/70 p-1 text-center">
         <StudentReport student={student} />
-      </td>
-
-      <td className="border-b border-l border-border/70 p-1 text-center">
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => onDelete(student.id)}
-          className="h-9 w-9 rounded-xl p-0"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </td>
     </tr>
   );

@@ -51,7 +51,6 @@ import {
   syncToCloud,
   syncFromCloud,
   mergeDuplicateStudents,
-  loadTeachers as loadCachedTeachers,
   registerStudentInYear,
 } from "@/utils/storage";
 import { getPendingChanges } from "@/utils/localDB";
@@ -82,7 +81,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface DirtyData {
   name: string;
-  teacher: string;
   history: HifzHistory;
   yearData: YearData;
 }
@@ -103,7 +101,6 @@ const Index = () => {
   } | null>(null);
   const [online, setOnline] = useState(navigator.onLine);
   const [dirtyMap, setDirtyMap] = useState<Record<number, DirtyData>>({});
-  const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
   const signOut = useSignOut();
@@ -123,40 +120,6 @@ const Index = () => {
     setDirtyMap({});
     setLoading(false);
   }, [dataYearKey]);
-
-  const loadTeachers = useCallback(async () => {
-    if (!user) {
-      setTeacherNames([]);
-      return;
-    }
-    const data = await loadCachedTeachers(currentYear);
-    setTeacherNames(data.map((r) => r.name));
-  }, [user, currentYear]);
-
-  useEffect(() => {
-    void loadTeachers();
-  }, [loadTeachers]);
-
-  // Merge dropdown: registered teachers + teachers already used by students this year
-  const mergedTeacherNames = (() => {
-    const set = new Set<string>(teacherNames);
-    for (const s of students) {
-      const t = (s.teacher || "").trim();
-      if (t) set.add(t);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "ar"));
-  })();
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState === "visible") void loadTeachers();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("focus", loadTeachers);
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("focus", loadTeachers);
-    };
-  }, [loadTeachers]);
 
   // Auto-sync queued offline changes
   const autoSyncPending = useCallback(async () => {
@@ -292,7 +255,8 @@ const Index = () => {
       await Promise.all(
         entries.map(async ([idStr, data]) => {
           const id = parseInt(idStr);
-          await saveStudent({ id, name: data.name, teacher: data.teacher });
+          // تعديل الاسم هنا لا يغيّر ربط الطالب/ة بالمعلم، الذي يُدار من صفحة الحلقات.
+          await saveStudent({ id, name: data.name });
           await saveHifzHistory(id, data.history);
           await saveYearData(dataYearKey, id, data.yearData);
         }),
@@ -369,26 +333,6 @@ const Index = () => {
         description: "تم إضافة طالب/طالبة جديدة",
       });
     }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("هل أنت متأكد من حذف هذا الطالب/الطالبة؟")) return;
-
-    const { deleteStudent } = await import("@/utils/storage");
-    await deleteStudent(id);
-
-    setDirtyMap((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-
-    await loadData();
-    toast({
-      title: "تم الحذف",
-      description: "تم حذف الطالب/الطالبة بنجاح",
-      variant: "destructive",
-    });
   };
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -851,11 +795,7 @@ const Index = () => {
               students={students}
               currentYear={currentYear}
               competitionLabel={competitionLabel}
-              onUpdate={loadData}
-              onDelete={handleDelete}
-              dirtyMap={dirtyMap}
               onDirtyChange={handleDirtyChange}
-              teacherNames={mergedTeacherNames}
             />
           )}
         </div>
@@ -952,9 +892,6 @@ const Index = () => {
                             <th className="border-b border-l border-white/15 px-2.5 py-2 text-right font-bold">
                               اسم الطالب/الطالبة
                             </th>
-                            <th className="border-b border-l border-white/15 px-2.5 py-2 text-right font-bold">
-                              المعلم/ة
-                            </th>
                             <th className="w-16 border-b border-white/15 px-2 py-2 text-center font-bold">
                               الأجزاء
                             </th>
@@ -987,9 +924,6 @@ const Index = () => {
                                 </td>
                                 <td className="border-b border-l border-border/60 px-2.5 py-1.5 font-bold">
                                   {s.name || "بدون اسم"}
-                                </td>
-                                <td className="border-b border-l border-border/60 px-2.5 py-1.5 text-muted-foreground">
-                                  {s.teacher || "—"}
                                 </td>
                                 <td className="border-b border-border/60 px-2 py-1.5 text-center font-bold text-amber-800">
                                   {s.yearData?.parts || "0"}

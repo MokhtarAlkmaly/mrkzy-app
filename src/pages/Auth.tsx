@@ -183,15 +183,8 @@ const Auth = () => {
     setCapsLock(event.getModifierState?.("CapsLock") ?? false);
   };
 
-  const requireOnline = () => {
-    if (navigator.onLine) return true;
-    toast({
-      title: "لا يوجد اتصال بالإنترنت",
-      description: "هذه العملية تحتاج اتصالاً. بعد تسجيل الدخول يعمل النظام دون اتصال.",
-      variant: "destructive",
-    });
-    return false;
-  };
+  // النسخة الأوفلاين: كل الحسابات محلية على الجهاز، فلا عملية تحتاج إنترنت.
+  const requireOnline = () => true;
 
   const handleLogin = async () => {
     const normalizedEmail = normalizeEmail(currentEmail);
@@ -297,6 +290,7 @@ const Auth = () => {
 
     setResetLoading(true);
     try {
+      // أوفلاين: لا بريد — إعادة التعيين بيد مسؤول الجهاز من «إدارة المستخدمين»
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo: getAuthEmailRedirect(),
       });

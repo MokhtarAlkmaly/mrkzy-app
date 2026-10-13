@@ -54,6 +54,7 @@ import {
   type AppUser,
 } from "@/utils/users";
 import { supabase } from "@/integrations/supabase/client";
+import { FolderDatabaseSettings } from "@/components/FolderDatabaseSettings";
 
 const columnTypeLabels: Record<NonNullable<CustomColumnDef["type"]>, string> = {
   text: "نص",

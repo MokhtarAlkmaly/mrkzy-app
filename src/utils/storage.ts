@@ -185,7 +185,10 @@ subscribeViewAs(() => {
 });
 
 // ===== Online check =====
-const isOnline = () => typeof navigator !== "undefined" && navigator.onLine;
+// النسخة الأوفلاين: "السحابة" هنا هي قاعدة البيانات المجلدية على الجهاز نفسه،
+// وهي متاحة دائماً سواء وُجد اتصال بالشبكة أم لا — لذا لا نربط أبداً
+// القراءة/الكتابة بحالة navigator.onLine.
+const isOnline = () => true;
 
 const canUseCloud = (userId: string | null): userId is string => !!userId && isOnline();
 

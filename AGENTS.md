@@ -1,12 +1,9 @@
-<!-- LOVABLE:BEGIN -->
+# ملاحظات للمطوّرين
 
-> [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
+هذه النسخة **أوفلاين بالكامل** (قاعدة بيانات مجلدية على الجهاز + مستخدمون
+محليون). ليست مرتبطة بـ Lovable ولا بـ Supabase:
 
-<!-- LOVABLE:END -->
+- لا تضف أي استدعاء شبكة/سحابة — كل البيانات عبر
+  `src/integrations/supabase/client.ts` (الواجهة المحلية) فوق
+  `src/utils/folderDB.ts`.
+- شغّل قبل أي دفع: `npm run lint && npm run typecheck && npm run test:offline && npm run build`.

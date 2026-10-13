@@ -1,8 +1,7 @@
 name: بناء تطبيق أندرويد (APK)
 
 # يبني ملف APK جاهزًا للتثبيت، دون الحاجة لأي جهاز كمبيوتر أو Android Studio.
-# طريقة الاستخدام: ارفع المشروع إلى GitHub، أضف 3 أسرار (Secrets) في إعدادات
-# المستودع، ثم شغّل هذا الـ workflow يدويًا وحمّل الملف الناتج من "Artifacts".
+# طريقة الاستخدام: ارفع المشروع إلى GitHub، لا أسرار ولا متغيرات بيئة مطلوبة، شغّل هذا الـ workflow يدويًا وحمّل الملف الناتج من "Artifacts".
 
 on:
   workflow_dispatch:
@@ -38,9 +37,6 @@ jobs:
       - name: بناء ملفات الويب
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
           CAPACITOR_BUILD: "1"
 
       - name: توليد index.html ثابت من الخادم (لتطبيق أندرويد فقط)

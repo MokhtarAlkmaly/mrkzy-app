@@ -1,6 +1,6 @@
 {
-  "appId": "org.inmaa.msabkarmdan",
-  "appName": "مركز إنماء الأهلي الخيري",
+  "appId": "org.inmaa.mrkzy.offline",
+  "appName": "مركزي أوفلاين — مركز إنماء",
   "webDir": ".output/public",
   "plugins": {
     "CapacitorSQLite": {

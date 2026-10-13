@@ -37,5 +37,12 @@
 
     <!-- Permissions -->
 
+    <!-- النسخة الأوفلاين لا تحتاج إنترنت إطلاقاً، لكن نبقي الإذن حتى تعمل
+         أي روابط خارجية اختيارية (واتساب/خرائط) دون مشاكل في بعض الأجهزة. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- قاعدة البيانات المجلدية على الذاكرة الخارجية/المشتركة -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 </manifest>

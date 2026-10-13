@@ -1,9 +1,6 @@
-name: فحص جودة الكود (lint + أنواع + اختبارات SQL + بناء الويب)
+name: فحص جودة الكود (lint + أنواع + اختبارات أوفلاين + بناء الويب)
 
-# يفحص كل دفع إلى main وكل طلب سحب: ESLint، فحص أنواع TypeScript، اختبارات
-# ترحيلات قاعدة البيانات (PGlite)، وبناء الويب الكامل.
-# قيم Supabase هنا قيم وهمية فقط لأن الغرض التحقق من البناء والتعريفات
-# (check-env.mjs يتحقق من وجود المتغيرات لا من صحتها).
+# النسخة الأوفلاين: لا خادم ولا أسرار — الفحوص كلها محلية.
 
 on:
   push:
@@ -36,8 +33,8 @@ jobs:
       - name: فحص أنواع TypeScript
         run: npm run typecheck
 
-      - name: اختبارات ترحيلات قاعدة البيانات
-        run: npm run test:sql
+      - name: اختبارات قاعدة البيانات المجلدية والمستخدمين المحليين
+        run: npm run test:offline
 
       - name: اختبارات التواريخ (توقيت اليمن)
         run: npm run test:dates
@@ -47,7 +44,3 @@ jobs:
 
       - name: بناء الويب
         run: npm run build
-        env:
-          VITE_SUPABASE_URL: https://placeholder.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: placeholder-key
-          VITE_SUPABASE_PROJECT_ID: placeholder

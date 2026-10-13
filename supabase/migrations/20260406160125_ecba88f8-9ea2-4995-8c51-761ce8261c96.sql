@@ -1,1 +1,0 @@
-ALTER TABLE public.year_data ADD COLUMN teacher text NOT NULL DEFAULT '';

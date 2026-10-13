@@ -21,7 +21,7 @@ const getDisplayName = (
 };
 
 /**
- * تذييل القائمة الجانبية: بطاقة الحساب الحالي، وحالة الاتصال (متصل/أوفلاين)،
+ * تذييل القائمة الجانبية: بطاقة الحساب الحالي، وحالة العمل المحلي،
  * وزر تسجيل الخروج. في وضع القائمة المصغّرة تظهر الأيقونات فقط مع تلميح.
  */
 export function SidebarAccountFooter() {
@@ -33,10 +33,8 @@ export function SidebarAccountFooter() {
 
   const displayName = getDisplayName(user?.user_metadata, user?.email);
   const initial = displayName.trim().charAt(0) || "؟";
-  const statusLabel = online ? "متصل" : "أوفلاين";
-  const statusHint = online
-    ? "متصل بالإنترنت — تُزامَن التعديلات مع السحابة"
-    : "أوفلاين — تُحفظ التعديلات على الجهاز وتُرفع عند عودة الاتصال";
+  const statusLabel = "محلي — أوفلاين";
+  const statusHint = "كل البيانات تُحفظ فوراً في مجلد MrkzyDatabase على هذا الجهاز";
 
   const handleSignOut = async () => {
     setSigningOut(true);

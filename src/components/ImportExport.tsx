@@ -194,10 +194,9 @@ export const ImportExport = ({ onDataImported, currentYear, displayYear }: Props
 
         onDataImported();
         try {
-          if (navigator.onLine) {
-            setImportProgress({ current: jsonData.length, total: jsonData.length });
-            await syncToCloud();
-          }
+          // أوفلاين: الحفظ والمزامنة مع مجلد القاعدة محلياً دائماً
+          setImportProgress({ current: jsonData.length, total: jsonData.length });
+          await syncToCloud();
         } catch (e) {
           console.error("Cloud sync after import failed:", e);
         }

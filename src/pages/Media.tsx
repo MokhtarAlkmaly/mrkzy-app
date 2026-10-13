@@ -58,7 +58,8 @@ const Media = () => {
     const items = (await loadMediaMetadata(selectedYear)) as MediaItem[];
     setMediaItems(items);
     // Generate signed URLs for all cached metadata items.
-    if (items.length > 0 && navigator.onLine) {
+    if (items.length > 0) {
+      // أوفلاين: روابط الملفات محلية من مجلد القاعدة
       const paths = items.map((i) => i.file_path);
       const { data: signed } = await supabase.storage.from("media").createSignedUrls(paths, 3600);
       const map: Record<string, string> = {};
@@ -127,7 +128,7 @@ const Media = () => {
   const handleDelete = async (item: MediaItem) => {
     if (!confirm("هل أنت متأكد من حذف هذا الملف؟")) return;
 
-    if (navigator.onLine && user) {
+    if (user) {
       await supabase.storage.from("media").remove([item.file_path]);
     }
     await deleteMediaMetadataLocal(item.id);

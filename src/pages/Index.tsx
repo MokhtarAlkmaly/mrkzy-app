@@ -123,7 +123,7 @@ const Index = () => {
 
   // Auto-sync queued offline changes
   const autoSyncPending = useCallback(async () => {
-    if (!navigator.onLine || !user) return;
+    if (!user) return;
     try {
       const pending = await getPendingChanges();
       if (pending.length === 0) return;
@@ -172,7 +172,7 @@ const Index = () => {
       // Auto-remove duplicate students silently on startup
       try {
         const merged = await mergeDuplicateStudents();
-        if (merged > 0 && navigator.onLine) {
+        if (merged > 0) {
           await syncToCloud();
         }
       } catch (e) {

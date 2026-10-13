@@ -1,9 +1,0 @@
-/android
-/supabase
-/.lovable
-/.workspace
-node_modules
-.env
-.env.*
-!.env.example
-tsconfig.tsbuildinfo

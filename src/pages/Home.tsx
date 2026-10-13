@@ -49,7 +49,7 @@ const Home = () => {
     {
       to: "/students",
       label: "الطلاب والطالبات",
-      desc: "السجل الرسمي: إضافة، تعديل، حذف",
+      desc: "السجل الرسمي: إضافة وتعديل بيانات الطلاب والطالبات",
       icon: GraduationCap,
       color: "from-primary to-emerald-700",
     },

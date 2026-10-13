@@ -11,9 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter, Printer, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Props {
-  teachers: string[];
-  selectedTeacher: string;
-  onTeacherChange: (value: string) => void;
   nameFilter: string;
   onNameFilterChange: (value: string) => void;
   statusFilter: string;
@@ -27,9 +24,6 @@ interface Props {
 }
 
 export const TableFilters = ({
-  teachers,
-  selectedTeacher,
-  onTeacherChange,
   nameFilter,
   onNameFilterChange,
   statusFilter,
@@ -87,21 +81,7 @@ export const TableFilters = ({
       </button>
 
       {isOpen && (
-        <div className="grid grid-cols-1 gap-3 border-t border-border/60 bg-background/45 p-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Select value={selectedTeacher} onValueChange={onTeacherChange}>
-            <SelectTrigger className="h-11 rounded-2xl bg-background text-sm">
-              <SelectValue placeholder="المعلم/المعلمة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل المعلمين والمعلمات</SelectItem>
-              {teachers.map((teacher) => (
-                <SelectItem key={teacher} value={teacher}>
-                  {teacher}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+        <div className="grid grid-cols-1 gap-3 border-t border-border/60 bg-background/45 p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input

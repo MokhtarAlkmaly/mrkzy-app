@@ -3,7 +3,6 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 export type SortField =
   | "index"
   | "name"
-  | "teacher"
   | "baseHifz"
   | "parts"
   | "totalHifz"
@@ -64,7 +63,6 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
           "right-[50px] z-40 min-w-[200px] w-[200px]",
           2,
         )}
-        {sortableHeader("المعلم/المعلمة", "teacher", "min-w-[200px] w-[200px]", 2)}
         <th
           rowSpan={2}
           className="border-b border-l border-primary-foreground/10 p-2 min-w-[80px] sticky top-0 z-20 bg-primary cursor-pointer hover:bg-primary/85 select-none transition-colors"
@@ -93,12 +91,6 @@ export const TableHeader = ({ currentYear, sortField, sortDirection, onSort }: P
           className="border-b border-l border-primary-foreground/10 p-2 min-w-[60px] sticky top-0 z-20 bg-primary"
         >
           تقرير
-        </th>
-        <th
-          rowSpan={2}
-          className="border-b border-l border-primary-foreground/10 p-2 min-w-[60px] sticky top-0 z-20 bg-primary"
-        >
-          حذف
         </th>
       </tr>
       <tr>

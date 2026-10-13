@@ -34,7 +34,6 @@ import {
   Search as SearchIcon,
   Plus,
   Pencil,
-  Trash2,
   Save,
   Trophy,
   Sparkles,
@@ -69,10 +68,6 @@ import {
 import {
   loadAllStudentsAllYears,
   saveStudent,
-  deleteStudent,
-  deleteStudents,
-  deleteDuplicateStudents,
-  deleteAllData,
   loadCustomColumns,
   loadStudentStatuses,
   type StudentAllYears,
@@ -86,7 +81,6 @@ import {
   getExtraDuplicateRecordsCount,
   normalizeStudentName,
 } from "@/utils/studentNames";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   ALL_GRADES_VALUE,
   DEFAULT_SCHOOL_GRADES,
@@ -199,15 +193,8 @@ const Students = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm());
-  const [dedupDialogOpen, setDedupDialogOpen] = useState(false);
-  const [deduping, setDeduping] = useState(false);
-  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
-  const [deletingAll, setDeletingAll] = useState(false);
   const [sortField, setSortField] = useState<StudentSortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
-  const [deleteSelectedDialogOpen, setDeleteSelectedDialogOpen] = useState(false);
-  const [deletingSelected, setDeletingSelected] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -360,54 +347,6 @@ const Students = () => {
     };
   }, [filtered]);
 
-  const allFilteredSelected =
-    filtered.length > 0 && filtered.every((s) => selectedStudentIds.has(s.id));
-
-  const toggleSelectStudent = (id: number) => {
-    if (readOnly) return;
-    setSelectedStudentIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAllFiltered = () => {
-    if (readOnly) return;
-    setSelectedStudentIds((prev) => {
-      const next = new Set(prev);
-      if (allFilteredSelected) {
-        filtered.forEach((s) => next.delete(s.id));
-      } else {
-        filtered.forEach((s) => next.add(s.id));
-      }
-      return next;
-    });
-  };
-
-  const handleConfirmDeleteSelected = async () => {
-    if (readOnly || selectedStudentIds.size === 0) return;
-    setDeletingSelected(true);
-    try {
-      const count = selectedStudentIds.size;
-      await deleteStudents(Array.from(selectedStudentIds));
-      setSelectedStudentIds(new Set());
-      setDeleteSelectedDialogOpen(false);
-      await load();
-      toast({
-        title: "تم حذف الطلاب المحددين",
-        description: `تم حذف ${count} طالب/طالبة وبياناتهم نهائياً.`,
-        variant: "destructive",
-      });
-    } catch (error) {
-      console.error("Delete selected students failed:", error);
-      toast({ title: "تعذّر حذف الطلاب المحددين", variant: "destructive" });
-    } finally {
-      setDeletingSelected(false);
-    }
-  };
-
   const hasActiveFilters =
     genderFilter !== "all" ||
     statusFilter !== "all" ||
@@ -548,61 +487,6 @@ const Students = () => {
     }
   };
 
-  const remove = async (s: StudentAllYears) => {
-    if (readOnly) return;
-    if (
-      !confirm(
-        `هل أنت متأكد من حذف "${s.name}"؟ سيتم حذف كل بياناته/بياناتها (الحفظ، الدرجات) من كل الأعوام نهائيًا.`,
-      )
-    )
-      return;
-    await deleteStudent(s.id);
-    toast({ title: "تم الحذف", variant: "destructive" });
-    await load();
-  };
-
-  const handleDeleteDuplicates = async () => {
-    if (readOnly) return;
-    setDeduping(true);
-    try {
-      const removed = await deleteDuplicateStudents();
-      setDedupDialogOpen(false);
-      await load();
-      toast({
-        title: removed > 0 ? "تم حذف الأسماء المكررة" : "لا توجد أسماء مكررة",
-        description:
-          removed > 0
-            ? `تم دمج وحذف ${removed} سجل مكرر مع الاحتفاظ ببيانات ودرجات الطالب/ة.`
-            : "جميع أسماء الطلاب والطالبات في السجل غير مكررة.",
-      });
-    } catch (error) {
-      console.error("Deduplicate failed:", error);
-      toast({ title: "تعذّر حذف الأسماء المكررة", variant: "destructive" });
-    } finally {
-      setDeduping(false);
-    }
-  };
-
-  const handleConfirmDeleteAll = async () => {
-    if (readOnly) return;
-    setDeletingAll(true);
-    try {
-      await deleteAllData();
-      setDeleteAllDialogOpen(false);
-      await load();
-      toast({
-        title: "تم حذف كل البيانات",
-        description: "تم مسح جميع الطلاب والطالبات وبيانات كافة الأعوام نهائياً.",
-        variant: "destructive",
-      });
-    } catch (error) {
-      console.error("Delete all failed:", error);
-      toast({ title: "تعذّر حذف كل البيانات", variant: "destructive" });
-    } finally {
-      setDeletingAll(false);
-    }
-  };
-
   /** تصدير السجل المعروض حالياً إلى Excel (مع كل حقول الملف التفصيلية). */
   const exportExcel = async () => {
     if (filtered.length === 0) {
@@ -725,8 +609,8 @@ const Students = () => {
           <div className="flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
             <Eye className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              تطالع سجل <strong>{viewAs?.name}</strong> — القراءة فقط، والإضافة والتعديل والحذف
-              معطّلة حتى تعود إلى بياناتك.
+              تطالع سجل <strong>{viewAs?.name}</strong> — القراءة فقط، والإضافة والتعديل معطّلان حتى
+              تعود إلى بياناتك.
             </p>
           </div>
         )}
@@ -741,15 +625,6 @@ const Students = () => {
                 بجانب الاسم — قد تكون إدخالاً مزدوجاً للطالب/ة نفسه.
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={readOnly || deduping}
-              onClick={() => setDedupDialogOpen(true)}
-              className="gap-1 border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> حذف مكرر أسماء الطلاب ({extraDuplicatesCount})
-            </Button>
           </div>
         )}
 
@@ -833,28 +708,6 @@ const Students = () => {
           >
             <Download className="h-4 w-4" /> {exporting ? "جارٍ التصدير..." : "تصدير Excel"}
           </Button>
-          <Button
-            variant="outline"
-            className="gap-1"
-            onClick={() => setDedupDialogOpen(true)}
-            disabled={readOnly || deduping}
-          >
-            <Trash2 className="h-4 w-4 text-amber-600" />
-            حذف مكرر أسماء الطلاب
-            {extraDuplicatesCount > 0 && (
-              <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-bold text-amber-700">
-                {extraDuplicatesCount}
-              </span>
-            )}
-          </Button>
-          <Button
-            variant="destructive"
-            className="gap-1"
-            onClick={() => setDeleteAllDialogOpen(true)}
-            disabled={readOnly}
-          >
-            <Trash2 className="h-4 w-4" /> حذف كل البيانات
-          </Button>
           <Button className="gap-1" onClick={openAdd} disabled={readOnly}>
             <Plus className="h-4 w-4" /> إضافة طالب/طالبة
           </Button>
@@ -871,7 +724,7 @@ const Students = () => {
           </div>
         ) : (
           <div className="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-card/95 shadow-2xl shadow-primary/10 backdrop-blur">
-            {/* شريط عنوان الجدول وأدوات التحديد */}
+            {/* شريط عنوان السجل */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 bg-gradient-to-l from-primary/[0.08] via-emerald-500/[0.04] to-transparent px-4 py-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -887,53 +740,21 @@ const Students = () => {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {selectedStudentIds.size > 0 && !readOnly && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedStudentIds(new Set())}
-                      className="h-8 text-xs"
-                    >
-                      إلغاء التحديد ({selectedStudentIds.size})
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => setDeleteSelectedDialogOpen(true)}
-                      className="h-8 gap-1 rounded-xl text-xs shadow-sm"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      حذف الطلاب المحددين ({selectedStudentIds.size})
-                    </Button>
-                  </>
-                )}
-                <span className="rounded-full bg-primary/12 px-3 py-1 text-xs font-extrabold text-primary ring-1 ring-primary/20">
-                  {filtered.length} طالب/طالبة
-                </span>
-              </div>
+              <span className="rounded-full bg-primary/12 px-3 py-1 text-xs font-extrabold text-primary ring-1 ring-primary/20">
+                {filtered.length} طالب/طالبة
+              </span>
             </div>
 
             <div className="table-scroll max-h-[60vh] overflow-auto md:max-h-[72vh]">
               <table className="w-full min-w-[1100px] border-separate border-spacing-0 text-sm">
                 <thead className="sticky top-0 z-20 bg-gradient-to-l from-primary via-emerald-700 to-teal-800 text-primary-foreground shadow-md">
                   <tr>
-                    <th className="sticky right-0 z-30 w-11 border-b border-l border-white/15 bg-primary px-2 py-3 text-center">
-                      <Checkbox
-                        checked={allFilteredSelected}
-                        onCheckedChange={toggleSelectAllFiltered}
-                        disabled={readOnly || filtered.length === 0}
-                        aria-label="تحديد الكل"
-                        className="border-white/70 data-[state=checked]:bg-white data-[state=checked]:text-primary"
-                      />
-                    </th>
-                    <th className="sticky right-11 z-30 w-12 border-b border-l border-white/15 bg-primary px-2 py-3 text-center font-black">
+                    <th className="sticky right-0 z-30 w-12 border-b border-l border-white/15 bg-primary px-2 py-3 text-center font-black">
                       م
                     </th>
                     <th
                       onClick={() => handleSort("name")}
-                      className="sticky right-[92px] z-30 min-w-[230px] cursor-pointer select-none border-b border-l border-white/15 bg-primary px-3 py-3 text-right font-bold transition-colors hover:bg-emerald-800"
+                      className="sticky right-12 z-30 min-w-[230px] cursor-pointer select-none border-b border-l border-white/15 bg-primary px-3 py-3 text-right font-bold transition-colors hover:bg-emerald-800"
                     >
                       <div className="flex items-center justify-between gap-1">
                         <span>اسم الطالب / الطالبة</span>
@@ -1022,7 +843,6 @@ const Students = () => {
                 <tbody>
                   {filtered.map((s, i) => {
                     const dupCount = getDuplicateCountFor(s.name, duplicateCounts);
-                    const isSelected = selectedStudentIds.has(s.id);
                     const partsNum = parseFloat(s.yearData?.parts || "0") || 0;
                     const totalHifzNum = parseFloat(s.yearData?.totalHifz || "0") || 0;
                     const totalScoreNum = parseFloat(s.yearData?.total || "0") || 0;
@@ -1035,25 +855,15 @@ const Students = () => {
                       <tr
                         key={s.id}
                         className={`group transition-colors ${
-                          isSelected
-                            ? "bg-primary/12 hover:bg-primary/16"
-                            : dupCount > 1
-                              ? "bg-amber-50/60 hover:bg-amber-100/60"
-                              : "odd:bg-card even:bg-secondary/25 hover:bg-primary/[0.06]"
+                          dupCount > 1
+                            ? "bg-amber-50/60 hover:bg-amber-100/60"
+                            : "odd:bg-card even:bg-secondary/25 hover:bg-primary/[0.06]"
                         }`}
                       >
-                        <td className="sticky right-0 z-10 border-b border-l border-border/60 bg-inherit px-2 py-2.5 text-center">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => toggleSelectStudent(s.id)}
-                            disabled={readOnly}
-                            aria-label={`تحديد ${s.name}`}
-                          />
-                        </td>
-                        <td className="sticky right-11 z-10 border-b border-l border-border/60 bg-inherit px-2 py-2.5 text-center font-black text-primary">
+                        <td className="sticky right-0 z-10 border-b border-l border-border/60 bg-inherit px-2 py-2.5 text-center font-black text-primary">
                           {i + 1}
                         </td>
-                        <td className="sticky right-[92px] z-10 border-b border-l border-border/60 bg-inherit px-3 py-2.5 font-semibold shadow-[-8px_0_14px_-12px_rgba(0,0,0,0.18)]">
+                        <td className="sticky right-12 z-10 border-b border-l border-border/60 bg-inherit px-3 py-2.5 font-semibold shadow-[-8px_0_14px_-12px_rgba(0,0,0,0.18)]">
                           <div className="flex items-center gap-2">
                             <span
                               className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-bold shadow-xs ${
@@ -1209,16 +1019,6 @@ const Students = () => {
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => void remove(s)}
-                              disabled={readOnly}
-                              title="حذف"
-                              className="h-8 w-8 rounded-xl p-0"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -1271,7 +1071,7 @@ const Students = () => {
                 <tfoot className="sticky bottom-0 z-10 bg-gradient-to-l from-secondary via-secondary/95 to-background font-bold text-foreground shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={7}
                       className="border-t-2 border-l border-primary/30 px-4 py-2.5 text-right text-xs sm:text-sm"
                     >
                       خلاصة الكشف المعروض:{" "}
@@ -1285,7 +1085,7 @@ const Students = () => {
                       متوسط: {summaryStats.avgScore}
                     </td>
                     <td
-                      colSpan={3 + customColumns.length}
+                      colSpan={2 + customColumns.length}
                       className="border-t-2 border-primary/30 px-3 py-2.5 text-center text-xs text-muted-foreground"
                     >
                       الخاتمون والخاتمات:{" "}
@@ -1512,96 +1312,6 @@ const Students = () => {
             </Button>
             <Button onClick={() => void save()} disabled={saving} className="gap-1">
               <Save className="h-4 w-4" /> {saving ? "جارٍ الحفظ..." : "حفظ"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* تأكيد حذف مكرر أسماء الطلاب */}
-      <Dialog open={dedupDialogOpen} onOpenChange={setDedupDialogOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-amber-600" /> حذف مكرر أسماء الطلاب
-            </DialogTitle>
-            <DialogDescription>
-              {extraDuplicatesCount > 0
-                ? `سيتم دمج وحذف ${extraDuplicatesCount} سجل مكرر (من أصل ${duplicatesTotal} سجل متشابه بالاسم) مع الاحتفاظ بسجل أصلي واحد لكل طالب/ة ونقل أي درجات أو بيانات أعوام إليه حتى لا تضيع.`
-                : "لا توجد حالياً أسماء مكررة في السجل، ولكن يمكنك تشغيل الفحص للتأكد."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDedupDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button
-              onClick={() => void handleDeleteDuplicates()}
-              disabled={deduping}
-              className="gap-1"
-            >
-              <Trash2 className="h-4 w-4" />
-              {deduping ? "جارٍ حذف المكرر..." : "تأكيد حذف المكرر"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ملاحظة: حذف بيانات عام انتقل إلى صفحة الإعدادات وحدها */}
-
-      {/* تأكيد حذف كل البيانات */}
-      <Dialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" /> حذف كل البيانات نهائياً
-            </DialogTitle>
-            <DialogDescription>
-              سيتم حذف جميع الطلاب والطالبات وبيانات كافة الأعوام والمتابعات الشهرية والمعلمين
-              والحلقات والجوائز والشهادات والمصروفات نهائياً من السحابة وهذا الجهاز. هذا الإجراء لا
-              يمكن التراجع عنه.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteAllDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void handleConfirmDeleteAll()}
-              disabled={deletingAll}
-              className="gap-1"
-            >
-              <Trash2 className="h-4 w-4" />
-              {deletingAll ? "جارٍ الحذف..." : "تأكيد حذف كل البيانات"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* تأكيد حذف الطلاب المحددين */}
-      <Dialog open={deleteSelectedDialogOpen} onOpenChange={setDeleteSelectedDialogOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" /> حذف الطلاب المحددين ({selectedStudentIds.size})
-            </DialogTitle>
-            <DialogDescription>
-              سيتم حذف {selectedStudentIds.size} طالب/طالبة مع كافة درجاتهم وسجل حفظهم من جميع
-              الأعوام نهائياً.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteSelectedDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void handleConfirmDeleteSelected()}
-              disabled={deletingSelected || selectedStudentIds.size === 0}
-              className="gap-1"
-            >
-              <Trash2 className="h-4 w-4" />
-              {deletingSelected ? "جارٍ الحذف..." : `تأكيد حذف (${selectedStudentIds.size})`}
             </Button>
           </DialogFooter>
         </DialogContent>

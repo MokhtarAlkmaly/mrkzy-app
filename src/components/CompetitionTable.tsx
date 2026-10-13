@@ -10,7 +10,6 @@ import { getTableFilters, setTableFilters } from "@/utils/storage";
 
 interface DirtyData {
   name: string;
-  teacher: string;
   history: HifzHistory;
   yearData: YearData;
 }
@@ -19,26 +18,17 @@ interface Props {
   students: Student[];
   currentYear: string;
   competitionLabel?: string;
-  onUpdate: () => void;
-  onDelete: (id: number) => void;
-  dirtyMap: Record<number, DirtyData>;
   onDirtyChange: (studentId: number, data: DirtyData) => void;
-  teacherNames?: string[];
 }
 
 export const CompetitionTable = ({
   students,
   currentYear,
   competitionLabel = "المسابقة الرمضانية",
-  onUpdate,
-  onDelete,
-  dirtyMap,
   onDirtyChange,
-  teacherNames = [],
 }: Props) => {
   const STORAGE_KEY = "competitionTable.filters";
   type Persisted = {
-    selectedTeacher: string;
     nameFilter: string;
     statusFilter: string;
     gradeFilter: string;
@@ -55,7 +45,6 @@ export const CompetitionTable = ({
     }
   };
   const saved = loadPersisted();
-  const [selectedTeacher, setSelectedTeacher] = useState<string>(saved.selectedTeacher ?? "all");
   const [nameFilter, setNameFilter] = useState<string>(saved.nameFilter ?? "");
   const [statusFilter, setStatusFilter] = useState<string>(saved.statusFilter ?? "all");
   const [gradeFilter, setGradeFilter] = useState<string>(saved.gradeFilter ?? "all");
@@ -79,7 +68,6 @@ export const CompetitionTable = ({
           Object.keys(remote).length > 0 &&
           remoteUpdated > localUpdated
         ) {
-          if (remote.selectedTeacher !== undefined) setSelectedTeacher(remote.selectedTeacher);
           if (remote.nameFilter !== undefined) setNameFilter(remote.nameFilter);
           if (remote.statusFilter !== undefined) setStatusFilter(remote.statusFilter);
           if (remote.gradeFilter !== undefined) setGradeFilter(remote.gradeFilter);
@@ -103,7 +91,6 @@ export const CompetitionTable = ({
 
   useEffect(() => {
     const data: Persisted = {
-      selectedTeacher,
       nameFilter,
       statusFilter,
       gradeFilter,
@@ -142,21 +129,11 @@ export const CompetitionTable = ({
       window.removeEventListener("pagehide", flush);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [
-    selectedTeacher,
-    nameFilter,
-    statusFilter,
-    gradeFilter,
-    partsFilter,
-    sortField,
-    sortDirection,
-    cloudLoaded,
-  ]);
+  }, [nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection, cloudLoaded]);
 
   const savePersistedSettings = useCallback(
     (overrides: Partial<Persisted> = {}) => {
       const data: Persisted = {
-        selectedTeacher,
         nameFilter,
         statusFilter,
         gradeFilter,
@@ -172,7 +149,7 @@ export const CompetitionTable = ({
         /* ignore */
       }
     },
-    [selectedTeacher, nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection],
+    [nameFilter, statusFilter, gradeFilter, partsFilter, sortField, sortDirection],
   );
 
   const handleSort = useCallback(
@@ -195,11 +172,6 @@ export const CompetitionTable = ({
     [sortField, sortDirection, savePersistedSettings],
   );
 
-  const teachers = useMemo(() => {
-    const uniqueTeachers = Array.from(new Set(students.map((s) => s.teacher).filter(Boolean)));
-    return uniqueTeachers.sort((a, b) => a.localeCompare(b, "ar"));
-  }, [students]);
-
   const currentYearNum = parseInt(currentYear);
 
   const getStudentSortValue = useCallback(
@@ -216,8 +188,6 @@ export const CompetitionTable = ({
       switch (field) {
         case "name":
           return student.name || "";
-        case "teacher":
-          return student.teacher || "";
         case "baseHifz":
           return baseHifz;
         case "parts":
@@ -261,7 +231,6 @@ export const CompetitionTable = ({
 
   const filteredStudents = useMemo(() => {
     const filtered = students.filter((student) => {
-      if (selectedTeacher !== "all" && student.teacher !== selectedTeacher) return false;
       if (nameFilter && !student.name.includes(nameFilter)) return false;
 
       const parts = parseFloat(student.yearData?.parts || "0");
@@ -302,7 +271,6 @@ export const CompetitionTable = ({
     return filtered;
   }, [
     students,
-    selectedTeacher,
     nameFilter,
     statusFilter,
     gradeFilter,
@@ -313,15 +281,10 @@ export const CompetitionTable = ({
   ]);
 
   const hasFilters =
-    selectedTeacher !== "all" ||
-    nameFilter !== "" ||
-    statusFilter !== "all" ||
-    gradeFilter !== "all" ||
-    partsFilter !== "";
+    nameFilter !== "" || statusFilter !== "all" || gradeFilter !== "all" || partsFilter !== "";
 
   const getFilterDescription = () => {
     const parts: string[] = [];
-    if (selectedTeacher !== "all") parts.push(`المعلم/المعلمة: ${selectedTeacher}`);
     if (statusFilter !== "all")
       parts.push(`الحالة: ${statusFilter === "active" ? "نشط" : "منقطع"}`);
     if (gradeFilter !== "all") parts.push(`التقدير: ${gradeFilter}`);
@@ -345,7 +308,6 @@ export const CompetitionTable = ({
         return `<tr>
         <td>${i + 1}</td>
         <td>${s.name}</td>
-        <td>${s.teacher}</td>
         <td>${s.yearData?.baseHifz || "-"}</td>
         <td>${s.yearData?.parts || "-"}</td>
         <td>${s.yearData?.totalHifz || "-"}</td>
@@ -402,14 +364,14 @@ export const CompetitionTable = ({
         <div class="count">عدد الطلاب والطالبات: <strong>${filteredStudents.length}</strong></div>
         <table>
           <thead><tr>
-            <th>م</th><th>الاسم</th><th>المعلم/المعلمة</th><th>الحفظ السابق</th><th>حفظ جديد</th>
+            <th>م</th><th>الاسم</th><th>الحفظ السابق</th><th>حفظ جديد</th>
             <th>الإجمالي</th><th>سنة</th><th>تلاوة</th><th>حفظ</th><th>المجموع</th>
             <th>الحالة</th><th>التقدير</th><th>المكافأة</th><th>المكافأة حسب الحالة</th>
           </tr></thead>
           <tbody>
             ${rows}
             <tr class="total-row">
-              <td colspan="12">إجمالي المكافآت</td>
+              <td colspan="11">إجمالي المكافآت</td>
               <td>${totalPrize.toLocaleString()}</td>
               <td>${totalStatusPrize.toLocaleString()}</td>
             </tr>
@@ -453,9 +415,6 @@ export const CompetitionTable = ({
   return (
     <div className="space-y-4">
       <TableFilters
-        teachers={teachers}
-        selectedTeacher={selectedTeacher}
-        onTeacherChange={setSelectedTeacher}
         nameFilter={nameFilter}
         onNameFilterChange={setNameFilter}
         statusFilter={statusFilter}
@@ -491,7 +450,7 @@ export const CompetitionTable = ({
           </div>
         </div>
         <div className="table-scroll max-h-[60vh] overflow-auto md:max-h-[72vh]">
-          <table className="w-full min-w-[1400px] table-fixed border-separate border-spacing-0 bg-card text-sm whitespace-nowrap">
+          <table className="w-full min-w-[1230px] table-fixed border-separate border-spacing-0 bg-card text-sm whitespace-nowrap">
             <TableHeader
               currentYear={currentYear}
               sortField={sortField}
@@ -505,9 +464,7 @@ export const CompetitionTable = ({
                   student={student}
                   index={index + 1}
                   currentYear={currentYear}
-                  onDelete={onDelete}
                   onDirtyChange={onDirtyChange}
-                  teacherNames={teacherNames}
                 />
               ))}
             </tbody>
@@ -515,7 +472,7 @@ export const CompetitionTable = ({
               <tfoot className="sticky bottom-0 z-10 bg-gradient-to-l from-secondary via-secondary/95 to-background font-bold text-foreground shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={3}
                     className="border-t-2 border-l border-primary/30 px-4 py-2.5 text-right text-xs"
                   >
                     إجمالي الكشف المعروض:{" "}
@@ -523,22 +480,19 @@ export const CompetitionTable = ({
                     طالب/طالبة
                   </td>
                   <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-amber-800">
+                    {filteredStats.totalParts} جزء
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-amber-800">
                     خاتمون: {filteredStats.khatimCount}
+                  </td>
+                  <td
+                    colSpan={4}
+                    className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-emerald-800"
+                  >
+                    متوسط المجموع: {filteredStats.avgScore}
                   </td>
                   <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs">
                     —
-                  </td>
-                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-amber-800">
-                    {filteredStats.totalParts} جزء
-                  </td>
-                  <td
-                    colSpan={5}
-                    className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs text-muted-foreground"
-                  >
-                    متوسط المجموع الكلي
-                  </td>
-                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs font-black text-emerald-800">
-                    {filteredStats.avgScore}
                   </td>
                   <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs">
                     —
@@ -547,6 +501,12 @@ export const CompetitionTable = ({
                     {filteredStats.totalPrize > 0
                       ? filteredStats.totalPrize.toLocaleString("ar-EG")
                       : "—"}
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs">
+                    —
+                  </td>
+                  <td className="border-t-2 border-l border-primary/30 px-2 py-2.5 text-center text-xs">
+                    —
                   </td>
                   <td className="border-t-2 border-primary/30 px-2 py-2.5 text-center text-xs">
                     —

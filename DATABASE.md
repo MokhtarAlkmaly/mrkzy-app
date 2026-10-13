@@ -2,9 +2,9 @@
 
 توثيق مخطط **Supabase (PostgreSQL)** المستخدم في التطبيق، مقابل أنواع TypeScript المولَّدة، وسكيمة SQLite المحلية.
 
-آخر مراجعة: **2026-10-11** — 22 جدولاً في `public`، لا يوجد جدول أو عمود مفقود بين `supabase/migrations/` و`src/integrations/supabase/types.ts`.
+آخر مراجعة: **2026-10-13** — 22 جدولاً في `public`، لا يوجد جدول أو عمود مفقود بين `supabase/migrations/` و`src/integrations/supabase/types.ts`.
 
-المخطط مُختبَر آلياً: `npm run test:sql` يشغّل كل الـ migrations على PostgreSQL حقيقي داخل الذاكرة (`@electric-sql/pglite`) ويفحص 117 حالة (RLS، الأدوار، دوال بوابة المعلم/ة، مشاركة القراءة، الأشهر الاثني عشر، أعمدة السجل الجديدة).
+المخطط مُختبَر آلياً: `npm run test:sql` يشغّل كل الـ migrations على PostgreSQL حقيقي داخل الذاكرة (`@electric-sql/pglite`) ويفحص 120 حالة (RLS، الأدوار، دوال بوابة المعلم/ة، مشاركة القراءة، الأشهر الاثني عشر، أعمدة السجل الجديدة).
 
 ---
 
@@ -15,12 +15,12 @@
 | `supabase/migrations/*.sql`          | مصدر الحقيقة لإنشاء المخطط من الصفر                   |
 | `src/integrations/supabase/types.ts` | أنواع العميل (`Database["public"]["Tables"]`)         |
 | `supabase/drop-all-tables.sql`       | حذف كل جداول `public` الـ 22 ودوالها ثم أي جدول متبقٍ |
-| `scripts/test-sql.mjs`               | اختبارات المخطط (117 اختباراً) على PGlite             |
+| `scripts/test-sql.mjs`               | اختبارات المخطط (120 اختباراً) على PGlite             |
 | `docs/دليل-نظام-المستخدمين.md`       | دليل تفعيل واستعمال نظام المستخدمين                   |
 | `docs/روابط-المعلمين-دليل.md`        | دليل بوابة المعلم/ة والوارد والتقرير اليدوي           |
 | `src/utils/sqliteClient.ts`          | سكيمة SQLite المحلية (مجموعة جزئية للكاش/الأوفلاين)   |
 | `src/utils/storage.ts`               | طبقة CRUD السحابية لجداول القرآن/المالية/المتابعة     |
-| `supabase/config.toml`               | `project_id = hzpvtmfgvddjkuzonict`                   |
+| `supabase/config.toml`               | `project_id = ueskpslsvfbiupqqcpwy`                   |
 
 ### إعادة الإنشاء من الصفر
 
@@ -28,7 +28,7 @@
 2. طبّق الـ migrations بالترتيب الزمني لأسماء الملفات (أو `supabase db push` / ربط Git).
 3. إن تغيّر المخطط: أعد توليد الأنواع:
    ```sh
-   npx supabase gen types typescript --project-id hzpvtmfgvddjkuzonict > src/integrations/supabase/types.ts
+   npx supabase gen types typescript --project-id ueskpslsvfbiupqqcpwy > src/integrations/supabase/types.ts
    ```
 
 ---
@@ -520,7 +520,7 @@ erDiagram
 
 ## مراجعة `types.ts` مقابل الـ migrations
 
-أُجريت مقارنة عمود-بعمود في 2026-10-11:
+أُجريت مقارنة عمود-بعمود في 2026-10-13:
 
 | الفحص                                        | النتيجة                                                                                               |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
